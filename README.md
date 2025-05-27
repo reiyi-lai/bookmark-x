@@ -29,7 +29,7 @@ Bookmark-X helps you automatically organize your Twitter bookmarks into meaningf
 
 ### User Management (2 days)
 - Simple email-based signup flow (don't necessarily need password)
-- Database schema updates
+- Database setup (Supabase?)
 - User data persistence
 - Basic account management
 
