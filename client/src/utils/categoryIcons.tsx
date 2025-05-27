@@ -7,7 +7,8 @@ import {
   Quote,
   GraduationCap,
   HelpCircle,
-  LayoutGrid
+  LayoutGrid,
+  Users
 } from "lucide-react";
 
 export interface CategoryIcon {
@@ -36,6 +37,11 @@ export const categoryIcons: Record<string, CategoryIcon> = {
     name: "Career Tips",
     icon: <Briefcase size={16} />,
     color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+  },
+  "person_search": {
+    name: "Job Opportunities",
+    icon: <Users size={16} />,
+    color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
   },
   "format_quote": {
     name: "Good Quotes",

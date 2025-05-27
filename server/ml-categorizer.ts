@@ -48,16 +48,22 @@ class KeywordMatcher {
       'automation tools': ['tool', 'automation', 'script', 'app ', 'platform', 'software', 'bot', 'workflow', 'efficiency',
                           'productivity', 'code', 'programming', 'tech'],
       'career tips': ['job', 'career', 'work', 'interview', 'resume', 'hire', 'hiring', 'professional', 'promotion',
-                     'skill', 'employer', 'employee', 'networking'],
+                     'workplace', 'skills', 'networking', 'leadership', 'management', 'salary', 'negotiation',
+                     'job search', 'cv', 'linkedin', 'professional development', 'mentorship', 'coaching'],
       'interesting reads': ['read', 'article', 'blog', 'post', 'interesting', 'fascinating', 'story', 'book', 'novel',
                            'publication', 'magazine', 'journal'],
       'content ideas': ['idea', 'content', 'blog', 'post', 'article', 'write', 'writing', 'topic', 'inspiration', 'creative', 
                        'create', 'concept'],
+      'job opportunities': ['hiring', 'looking for', 'seeking', 'recruiting', 'job opening', 'position available', 
+                                  'we are hiring', 'join our team', 'apply now', 'intern', 'internship', 'full-time', 
+                                  'part-time', 'remote', 'on-site', 'contract', 'freelance', 'opportunity', 'vacancy',
+                                  'talent', 'candidate', 'role', 'dm me', 'send resume', 'cv', 'portfolio', 'opening',
+                                  'job search', 'employment', 'work opportunity', 'join us'],
       'general knowledge': ['fact', 'trivia', 'knowledge', 'learn', 'know', 'education', 'history', 'science', 'culture',
                            'information', 'data', 'study', 'research', 'discover', 'interesting fact', 'did you know']
     };
   }
-  
+
   /**
    * Get keyword sets mapped by category ID
    * @param categories List of categories to map keywords to
@@ -83,10 +89,10 @@ class KeywordMatcher {
       
       // If no match found, use default keywords
       if (!keywordMap[category.id]) {
-        keywordMap[category.id] = [category.name.toLowerCase()];
+          keywordMap[category.id] = [category.name.toLowerCase()];
       }
     });
-    
+
     return keywordMap;
   }
 }
@@ -304,7 +310,7 @@ class TfIdfCategorizer extends BaseCategorizer {
     
     return bestCategoryId;
   }
-  
+
   /**
    * Train the TF-IDF model with category keywords
    */
@@ -430,7 +436,7 @@ class TfIdfCategorizer extends BaseCategorizer {
   }
 }
 
-/**
+  /**
  * Main categorizer class that orchestrates the chain of responsibility
  */
 export class MLCategorizer {

@@ -78,7 +78,8 @@ export const DEFAULT_CATEGORIES: InsertCategory[] = [
   { name: "Automation Tools", description: "Tools for automation", icon: "build", color: "#3498db", order: 2 },
   { name: "Interesting Reads", description: "Articles and threads worth reading", icon: "menu_book", color: "#2ecc71", order: 3 },
   { name: "Career Tips", description: "Career advice and tips", icon: "work", color: "#e67e22", order: 4 },
-  { name: "Good Quotes", description: "Inspirational and thoughtful quotes", icon: "format_quote", color: "#f1c40f", order: 5 },
-  { name: "Knowledge/Trivia", description: "General knowledge and interesting facts", icon: "school", color: "#e74c3c", order: 6 },
-  { name: "Uncategorized", description: "Bookmarks not yet categorized", icon: "help_outline", color: "#95a5a6", order: 7 },
+  { name: "Job Opportunities", description: "Job postings, hiring announcements, and people looking for opportunities", icon: "person_search", color: "#9b59b6", order: 5 },
+  { name: "Good Quotes", description: "Inspirational and thoughtful quotes", icon: "format_quote", color: "#f1c40f", order: 6 },
+  { name: "Knowledge/Trivia", description: "General knowledge and interesting facts", icon: "school", color: "#e74c3c", order: 7 },
+  { name: "Uncategorized", description: "Bookmarks not yet categorized", icon: "help_outline", color: "#95a5a6", order: 8 },
 ];

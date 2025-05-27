@@ -63,7 +63,7 @@ export default function Sidebar({
           {isLoading ? (
             // Loading skeleton for categories
             <div className="space-y-2">
-              {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                 <div key={i} className="flex items-center px-3 py-2">
                   <Skeleton className="h-4 w-4 mr-2" />
                   <Skeleton className="h-4 w-24" />
@@ -108,6 +108,7 @@ export default function Sidebar({
                       category.name === "Automation Tools" ? "text-blue-500" :
                       category.name === "Interesting Reads" ? "text-green-500" :
                       category.name === "Career Tips" ? "text-orange-500" :
+                      category.name === "Job Opportunities" ? "text-indigo-500" :
                       category.name === "Good Quotes" ? "text-yellow-500" :
                       category.name === "Knowledge/Trivia" ? "text-red-500" :
                       "text-gray-500"

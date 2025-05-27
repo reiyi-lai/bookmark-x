@@ -28,8 +28,9 @@ export default function CategoryModal({
     if (lowerName.includes('tool') || lowerName.includes('automation')) return 'bg-purple-500/10 text-purple-500 hover:bg-purple-500/20';
     if (lowerName.includes('read')) return 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20';
     if (lowerName.includes('career')) return 'bg-green-500/10 text-green-500 hover:bg-green-500/20';
+    if (lowerName.includes('job') || lowerName.includes('opportunities')) return 'bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20';
     if (lowerName.includes('quote')) return 'bg-pink-500/10 text-pink-500 hover:bg-pink-500/20';
-    if (lowerName.includes('knowledge') || lowerName.includes('trivia')) return 'bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20';
+    if (lowerName.includes('knowledge') || lowerName.includes('trivia')) return 'bg-red-500/10 text-red-500 hover:bg-red-500/20';
     return 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20';
   };
 
