@@ -53,11 +53,7 @@ Bookmark-X helps you automatically organize your Twitter bookmarks into meaningf
 npm install
 ```
 
-2. Set up environment variables:
-```bash
-cp .env.example .env
-# Add API keys and configuration
-```
+2. Set up environment variables in .env.
 
 3. Start development server:
 ```bash
