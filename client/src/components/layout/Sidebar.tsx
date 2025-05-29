@@ -86,7 +86,7 @@ export default function Sidebar({
                 <span className="text-gray-500 mr-2 flex items-center">{getMaterialIcon("widgets")}</span>
                 All Bookmarks
                 <span className="ml-auto bg-gray-200 dark:bg-dark-400 text-gray-700 dark:text-gray-300 text-xs rounded-full px-2 py-0.5">
-                  {categoryCount[0] || 0}
+                  {Object.values(categoryCount).reduce((sum, count) => sum + count, 0)}
                 </span>
               </Button>
 

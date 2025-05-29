@@ -119,6 +119,12 @@ export default function Home() {
               </Button>
               <h1 className="text-xl font-semibold">
                 {selectedCategory ? selectedCategory.name : 'All Bookmarks'}
+                <span className="ml-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded-full px-3 py-1">
+                  {selectedCategory 
+                    ? (categoryCount[selectedCategory.id] || 0)
+                    : Object.values(categoryCount).reduce((sum, count) => sum + count, 0)
+                  }
+                </span>
               </h1>
             </div>
             
