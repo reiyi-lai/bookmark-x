@@ -7,9 +7,10 @@ Bookmark-X helps you automatically organize your Twitter bookmarks into meaningf
 ### UI Changes (2 days)
 - **UI Enhancements (1-1.5 days)**
   - [x] Show total bookmark count
-  - [] Display tweet author details (name, profile picture, username)
+  - [ ] Display tweet author details (name, profile picture, username)
   - [ ] Expandable tweets with full content + media
   - [ ] Interactive loading screen with progress indicators
+  - [ ] Fix dark mode for sidebar
   
 - **Category System (0.5 days)**
   - [ ] Add new categories (startup/product ideas, research papers)
