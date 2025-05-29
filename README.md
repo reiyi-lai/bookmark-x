@@ -2,7 +2,7 @@
 
 Bookmark-X helps you automatically organize your Twitter bookmarks into meaningful categories using ML-powered classification.
 
-## 🚀 Launch Plan (Target: June 6)
+## 🚀 Soft Launch Plan (Target: June 6)
 
 ### UI Changes (2 days)
 - **UI Enhancements (1-1.5 days)**
@@ -29,7 +29,7 @@ Bookmark-X helps you automatically organize your Twitter bookmarks into meaningf
 
 ### User Management (2 days)
 - Simple email-based signup flow (don't necessarily need password)
-- Database schema updates
+- Database setup (Supabase?)
 - User data persistence
 - Basic account management
 
@@ -38,6 +38,9 @@ Bookmark-X helps you automatically organize your Twitter bookmarks into meaningf
 - Performance optimization
 - Rate limiting implementation (to manage initial load)
 - Launch preparation
+
+### Post June-6 (1 week)
+- Think hard about distribution strategy
 
 ## 🛠️ Tech Stack
 
