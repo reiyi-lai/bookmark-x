@@ -47,8 +47,8 @@ Bookmark-X helps you automatically organize your Twitter bookmarks into meaningf
 
 - **Frontend**: React, Vite, TailwindCSS, Radix UI
 - **Backend**: Express.js, TypeScript
-- **Database**: PostgreSQL (NeonDB)
-- **ML**: DeepSeek, Embedding-based Similarity, TF-IDF + Keyword Matching (potentially)
+- **Database**: (?)
+- **ML**: currently DeepSeek, Embedding-based Similarity, TF-IDF + Keyword Matching
 
 ## 🔧 Development Setup
 
