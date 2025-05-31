@@ -1,7 +1,22 @@
+# Dependencies
 node_modules
+
+# Build
 dist
-.DS_Store
 server/public
 vite.config.ts.*
-*.tar.gz
+
+# Environment
 .env
+.env.keys
+.env.local
+.env.*.local
+
+# System
+.DS_Store
+*.tar.gz
+
+# Supabase
+supabase/config.toml
+supabase/.branches
+supabase/.temp
