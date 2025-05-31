@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { User, Category, Bookmark, MediaAttachment } from '@shared/schema';
+import { User, Category, Bookmark, MediaAttachment, InsertBookmark, enrichCategoryWithMetadata } from '@shared/schema';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -38,18 +38,15 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-// Re-export unified types for convenience
-export type { User, Category, Bookmark, MediaAttachment };
-
-// Helper functions using unified types
 export const getCategories = async (): Promise<Category[]> => {
   const { data, error } = await supabase
     .from('categories')
-    .select('*')
-    .order('"order"');
+    .select('*');
 
   if (error) throw error;
-  return data || [];
+  
+  const enrichedCategories = (data || []).map(enrichCategoryWithMetadata);
+  return enrichedCategories.sort((a, b) => a.order - b.order);
 };
 
 export const getDefaultCategory = async (): Promise<Category | null> => {
@@ -60,7 +57,8 @@ export const getDefaultCategory = async (): Promise<Category | null> => {
     .single();
 
   if (error) return null;
-  return data;
+  
+  return data ? enrichCategoryWithMetadata(data) : null;
 };
 
 export const createOrUpdateUser = async (twitterId: string, twitterUsername: string, email?: string): Promise<User> => {
@@ -92,7 +90,8 @@ export const getUserByTwitterId = async (twitterId: string): Promise<User | null
   return data;
 };
 
-export const saveBookmarks = async (bookmarks: Omit<Bookmark, 'id' | 'created_at' | 'updated_at' | 'last_synced_at'>[]): Promise<Bookmark[]> => {
+type BookmarkInput = Omit<InsertBookmark, 'id' | 'created_at' | 'updated_at' | 'last_synced_at'>;
+export const saveBookmarks = async (bookmarks: BookmarkInput[]): Promise<Bookmark[]> => {
   const { data, error } = await supabase
     .from('bookmarks')
     .upsert(bookmarks, {
