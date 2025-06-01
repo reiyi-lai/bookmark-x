@@ -6,10 +6,29 @@ if (document.readyState === 'loading') {
 
 function initializeBookmarkBuddy() {
   addBookmarkButtonToHeader();
+  
+  // Monitor for URL changes (Twitter is a single-page app)
+  let currentUrl = window.location.href;
+  const urlObserver = new MutationObserver(() => {
+    if (window.location.href !== currentUrl) {
+      currentUrl = window.location.href;
+      // Small delay to let the page content load
+      setTimeout(addBookmarkButtonToHeader, 500);
+    }
+  });
+  
+  // Watch for navigation changes
+  urlObserver.observe(document.body, { childList: true, subtree: true });
 }
 
 // Add bookmark button next to the page title
 function addBookmarkButtonToHeader() {
+  // Check if we're on the bookmarks page
+  if (!window.location.href.includes('/i/bookmarks')) {
+    console.log('BookmarkBuddy: Not on bookmarks page, skipping button addition');
+    return;
+  }
+  
   // Find page title "Bookmarks"
   const pageTitle = findPageTitle();
   
