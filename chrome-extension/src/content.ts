@@ -227,7 +227,13 @@ async function collectAllTweetsAsJSON(): Promise<any[]> {
           
           if (isTweetNew) {
             const authorNameElement = tweetElement.querySelector('[data-testid="User-Name"] [dir="ltr"] span:first-child, [data-testid="User-Name"] span[dir="ltr"]:first-child, [data-testid="User-Name"] > div > div:first-child span');
-            const authorName = authorNameElement?.textContent?.split(/[@·]/)[0].trim();
+            
+            // Extract HTML content to preserve both text and emoji images
+            let authorName = '';
+            if (authorNameElement) {
+              const htmlContent = authorNameElement.innerHTML || '';
+              authorName = htmlContent.split(/[@·]/)[0].trim();
+            }
             
             const linkElement = tweetElement.querySelector('[role="link"]') as HTMLAnchorElement;
             const handle = linkElement?.href?.split('/').pop() || '';
@@ -358,7 +364,13 @@ async function collectWithNewTurboMethod(mode: string, timingMilestone: number, 
           
           if (tweetText) {
             const authorNameElement = tweetElement.querySelector('[data-testid="User-Name"] [dir="ltr"] span:first-child, [data-testid="User-Name"] span[dir="ltr"]:first-child, [data-testid="User-Name"] > div > div:first-child span');
-            const authorName = authorNameElement?.textContent?.split(/[@·]/)[0].trim();
+            
+            // Extract HTML content to preserve both text and emoji images
+            let authorName = '';
+            if (authorNameElement) {
+              const htmlContent = authorNameElement.innerHTML || '';
+              authorName = htmlContent.split(/[@·]/)[0].trim();
+            }
             
             const linkElement = tweetElement.querySelector('[role="link"]') as HTMLAnchorElement;
             const handle = linkElement?.href?.split('/').pop() || '';
