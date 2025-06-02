@@ -7,18 +7,14 @@ if (document.readyState === 'loading') {
 function initializeBookmarkBuddy() {
   addBookmarkButtonToHeader();
   
-  // Monitor for URL changes (Twitter is a single-page app)
+  // To change: Go directly to the bookmarks page
   let currentUrl = window.location.href;
   const urlObserver = new MutationObserver(() => {
     if (window.location.href !== currentUrl) {
       currentUrl = window.location.href;
-      // Small delay to let the page content load
-      setTimeout(addBookmarkButtonToHeader, 500);
+      setTimeout(addBookmarkButtonToHeader, 500); // Let page content load
     }
   });
-  
-  // Watch for navigation changes
-  urlObserver.observe(document.body, { childList: true, subtree: true });
 }
 
 // Add bookmark button next to the page title
@@ -29,7 +25,6 @@ function addBookmarkButtonToHeader() {
     return;
   }
   
-  // Find page title "Bookmarks"
   const pageTitle = findPageTitle();
   
   if (!pageTitle) {
@@ -49,7 +44,6 @@ function addBookmarkButtonToHeader() {
 function findPageTitle(): Element | null {
   console.log('BookmarkBuddy: Searching for page title...');
   
-  // Try multiple selectors to find the Bookmarks heading
   const selectors = [
     'h2[role="heading"][aria-level="2"]'
   ];
@@ -190,7 +184,7 @@ async function collectAllTweetsAsJSON(): Promise<any[]> {
   let reachedMilestone = false;
   const startTime = Date.now();
   
-  // MODE SELECTION - Change this to test different approaches
+  // TEMPORARY: To test scrolling mechanisms
   let MODE: 'CONSERVATIVE' | 'TURBO_FAST' | 'TURBO_ULTRA' = 'TURBO_FAST';
   
   let scrollInterval: number;
@@ -215,22 +209,15 @@ async function collectAllTweetsAsJSON(): Promise<any[]> {
     console.log('BookmarkBuddy: Starting TURBO_ULTRA collection (100ms delays)...');
   }
   
-  // Use the new turbo method for TURBO modes
   if (useNewTurboMethod) {
     const collectedTweets = await collectWithNewTurboMethod(MODE, TIMING_MILESTONE, startTime);
-    // TEMPORARY: Limit tweets for testing
-    // if (collectedTweets.length > TEMP_TEST_LIMIT) {
-    //   console.log(`BookmarkBuddy: Limiting to ${TEMP_TEST_LIMIT} tweets for testing`);
-    //   return collectedTweets.slice(0, TEMP_TEST_LIMIT);
-    // }
     return collectedTweets;
   }
   
-  // Original conservative method for CONSERVATIVE mode
+  // CONSERVATIVE Mode
   let previousTweetCount = 0;
   let unchangedCount = 0;
   let turboScrollCount = 0;
-  let lastContentLoadTime = Date.now();
   
   return new Promise((resolve) => {
     function updateTweets() {
@@ -247,7 +234,7 @@ async function collectAllTweetsAsJSON(): Promise<any[]> {
           if (isTweetNew) {
             const authorNameElement = tweetElement.querySelector('[data-testid="User-Name"] [dir="ltr"] span:first-child, [data-testid="User-Name"] span[dir="ltr"]:first-child, [data-testid="User-Name"] > div > div:first-child span');
             
-            // Extract HTML content to preserve both text and emoji images
+            // TO SIMPLIFY: Extract HTML content to get both text and emoji images
             let authorName = '';
             if (authorNameElement) {
               const htmlContent = authorNameElement.innerHTML || '';
@@ -267,7 +254,6 @@ async function collectAllTweetsAsJSON(): Promise<any[]> {
             const hasMedia = tweetElement.querySelector('[data-testid="tweetPhoto"], [data-testid="videoPlayer"]') !== null;
             const media = hasMedia ? 'has_media' : null;
             
-            // Enhanced profile picture extraction with multiple fallbacks
             const profilePicture = extractProfilePicture(tweetElement);
             
             tweets.push({
@@ -301,9 +287,9 @@ async function collectAllTweetsAsJSON(): Promise<any[]> {
         }
       });
       
-      if (newTweetsCount > 0) {
-        lastContentLoadTime = Date.now();
-      }
+      // if (newTweetsCount > 0) {
+      //   let lastContentLoadTime = Date.now();
+      // }
       
       if (newTweetsCount > 0 && tweets.length % 50 === 0) {
         console.log(`BookmarkBuddy: ${tweets.length} tweets collected (${MODE}) - ${newTweetsCount} new`);
@@ -343,7 +329,7 @@ async function collectAllTweetsAsJSON(): Promise<any[]> {
   });
 }
 
-// New turbo collection method based on user's optimized approach
+// Turbo scroll mode
 async function collectWithNewTurboMethod(mode: string, timingMilestone: number, startTime: number): Promise<any[]> {
   const allTweetElements = new Set<Element>();
   const tweets: any[] = [];
@@ -357,17 +343,17 @@ async function collectWithNewTurboMethod(mode: string, timingMilestone: number, 
   
   console.log(`BookmarkBuddy: Starting fast tweet collection with optimized infinite scroll (${waitTime}ms delays)...`);
   
-  // Continue until we truly reach the end (no arbitrary scroll limit)
   while (consecutiveNoNewTweets < 8) {
     const currentTweetElements = document.querySelectorAll('[data-testid="tweet"]');
     const previousCount = allTweetElements.size;
     
-    // Add new tweet elements to our collection
+    // TO FIX: theres's allTweetElements and tweets array now
     currentTweetElements.forEach(tweet => allTweetElements.add(tweet));
     
     const newTweetsFound = allTweetElements.size - previousCount;
     console.log(`BookmarkBuddy: +${newTweetsFound} tweets (total: ${allTweetElements.size})`);
     
+    // TO FIX: double logging with consecutiveNoNewTweets
     if (newTweetsFound === 0) {
       consecutiveNoNewTweets++;
     //   console.log(`BookmarkBuddy: No new tweets found (${consecutiveNoNewTweets}/8 attempts)`);
@@ -384,7 +370,7 @@ async function collectWithNewTurboMethod(mode: string, timingMilestone: number, 
           if (tweetText) {
             const authorNameElement = tweetElement.querySelector('[data-testid="User-Name"] [dir="ltr"] span:first-child, [data-testid="User-Name"] span[dir="ltr"]:first-child, [data-testid="User-Name"] > div > div:first-child span');
             
-            // Extract HTML content to preserve both text and emoji images
+            // TO SIMPLIFY: Extract HTML content to get both text and emoji
             let authorName = '';
             if (authorNameElement) {
               const htmlContent = authorNameElement.innerHTML || '';
@@ -404,7 +390,6 @@ async function collectWithNewTurboMethod(mode: string, timingMilestone: number, 
             const hasMedia = tweetElement.querySelector('[data-testid="tweetPhoto"], [data-testid="videoPlayer"]') !== null;
             const media = hasMedia ? 'has_media' : null;
             
-            // Enhanced profile picture extraction with multiple fallbacks
             const profilePicture = extractProfilePicture(tweetElement);
             
             tweets.push({
@@ -451,10 +436,10 @@ async function collectWithNewTurboMethod(mode: string, timingMilestone: number, 
     }
     lastScrollHeight = currentScrollHeight;
     
-    // Scroll to the very bottom of the page (not just a fixed amount)
+    // Scroll to bottom of page
     window.scrollTo(0, document.body.scrollHeight);
     
-    // Wait for new content - optimized for speed
+    // Wait for new content
     await new Promise(resolve => setTimeout(resolve, waitTime));
     
     scrollAttempts++;
@@ -473,7 +458,7 @@ async function collectWithNewTurboMethod(mode: string, timingMilestone: number, 
   return tweets;
 }
 
-// Update collection progress in button
+// Display collection progress via button
 function updateCollectionProgress(progress: number | string): void {
   const button = document.querySelector('.bookmarkbuddy-header-btn') as HTMLElement;
   if (button) {
@@ -557,7 +542,6 @@ function showButtonError(buttonElement: HTMLElement) {
 }
 
 function showNotification(message: string, type: 'success' | 'error') {
-  // Create notification element
   const notification = document.createElement('div');
   notification.style.cssText = `
     position: fixed;
@@ -589,12 +573,10 @@ function showNotification(message: string, type: 'success' | 'error') {
   }, 4000);
 }
 
-// Enhanced profile picture extraction with fallback to constructed URLs
 function extractProfilePicture(tweetElement: Element): string {
-  // Try the 2 working selectors first
   const workingSelectors = [
-    '[data-testid="Tweet-User-Avatar"] img',    // Primary selector
-    '[role="link"] img[alt]'                    // Alternative selector
+    '[data-testid="Tweet-User-Avatar"] img',
+    '[role="link"] img[alt]'                 
   ];
   
   for (const selector of workingSelectors) {
@@ -611,14 +593,12 @@ function extractProfilePicture(tweetElement: Element): string {
     }
   }
   
-  // Fallback: Extract handle and construct profile picture URL
+  // Fallback: Construct profile picture URL from twitter handle
   try {
     const linkElement = tweetElement.querySelector('[role="link"]') as HTMLAnchorElement;
     if (linkElement?.href) {
       const handle = linkElement.href.split('/').pop();
       if (handle && handle !== 'photo' && handle !== 'status') {
-        // Construct the profile picture URL using Twitter's API pattern
-        // This will redirect to the actual profile picture
         const fallbackUrl = `https://unavatar.io/twitter/${handle}`;
         return fallbackUrl;
       }
