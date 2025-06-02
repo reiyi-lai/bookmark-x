@@ -1,13 +1,10 @@
-// Background script (Service Worker) for BookmarkBuddy Chrome Extension
-
 console.log('BookmarkBuddy background script loaded');
 
-// Handle extension installation
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('BookmarkBuddy installed:', details.reason);
   
   if (details.reason === 'install') {
-    // Set default settings on first install
+    // Default settings on install
     chrome.storage.local.set({
       autoCategorizationEnabled: true,
       defaultCategory: 'Uncategorized',
@@ -16,13 +13,13 @@ chrome.runtime.onInstalled.addListener((details) => {
   }
 });
 
-// Handle messages from content script and popup
+// Handle messages from content script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('BookmarkBuddy: Received message:', message.type);
 
   if (message.type === 'PROCESS_TWEET_JSON_BULK') {
     handleProcessTweetJSONBulk(message.data, sendResponse);
-    return true; // Keep message channel open for async response
+    return true;
   }
 
   if (message.type === 'GET_CATEGORIES') {
@@ -34,10 +31,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   sendResponse({ error: 'Unknown message type' });
 });
 
-// Handle getting categories (simplified - remove when integrating with real backend)
 async function handleGetCategories(sendResponse: (response: any) => void) {
   try {
-    // TODO: Replace with real Supabase integration
+    // TODO: Replace with Supabase integration
     const mockCategories = [
       { id: '1', name: 'Tech', description: 'Technology tweets' },
       { id: '2', name: 'News', description: 'News and current events' },
@@ -54,13 +50,6 @@ async function handleGetCategories(sendResponse: (response: any) => void) {
   }
 }
 
-// Handle action button click (when user clicks extension icon)
-chrome.action.onClicked.addListener((tab) => {
-  console.log('Extension icon clicked on tab:', tab.url);
-  // The popup will handle the UI, this is just for logging
-});
-
-// Process raw tweet JSON data and extract structured information
 async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (response: any) => void) {
   try {
     console.log(`BookmarkBuddy: Processing ${rawTweetData.length} raw tweets...`);
@@ -86,8 +75,7 @@ async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (re
     
     console.log(`BookmarkBuddy: Processing complete. Success: ${successCount}, Errors: ${errorCount}`);
     
-    // TODO: Send processed tweets to Supabase/backend when ready
-    // For now, just return success with the processed data
+    // TODO: Send processed tweets to Supabase/backend
     console.log('BookmarkBuddy: Sample processed tweets:', processedTweets.slice(0, 3));
     
     sendResponse({
@@ -109,43 +97,26 @@ async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (re
 // Process individual raw tweet data into structured format
 function processRawTweetData(rawTweet: any): any | null {
   try {
-    // Validate essential fields
     if (!rawTweet.tweetId || !rawTweet.tweetUrl) {
       return null;
     }
     
-    // Validate author information
-    if (!rawTweet.handle && !rawTweet.authorName) {
-      return null;
-    }
-    
-    // Process timestamp with validation
     const processedDate = processTimestamp(rawTweet.time);
     
     return {
-      // Core identifiers
       tweetId: rawTweet.tweetId,
       url: rawTweet.tweetUrl,
-      
-      // Content (light cleaning)
       content: rawTweet.tweetText,
-      
-      // Author information (use as-is from content.ts)
       author: rawTweet.handle || '',
       authorDisplayName: rawTweet.authorName || '',
       authorProfilePicture: rawTweet.profilePicture || '',
-      
-      // Metadata
       tweetDate: processedDate,
       bookmarkedAt: new Date().toISOString(),
-      
-      // Media (handle string format from content.ts)
       mediaAttachments: rawTweet.media === 'has_media' ? [{ type: 'detected', detected: true }] : null,
       
-      // System fields
-      userId: null, // Will be set after authentication
-      tags: [], // Will be populated by AI categorization later
-      category: null // Will be set by AI categorization
+      userId: null, // Set after authentication
+      tags: [], // Set by AI categorization later
+      category: null // Set by AI categorization
     };
   } catch (error: unknown) {
     console.error('BookmarkBuddy: Error processing raw tweet data:', error);
@@ -153,7 +124,6 @@ function processRawTweetData(rawTweet: any): any | null {
   }
 }
 
-// Process and validate timestamp - KEEP (handles edge cases)
 function processTimestamp(timestamp: string): string {
   if (!timestamp) {
     return new Date().toISOString();
