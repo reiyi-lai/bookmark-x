@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "build": "tsc && vite build && npm run copy-static",
+    "preview": "vite preview",
+    "copy-static": "cp manifest.json dist/ && cp -r icons dist/"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0"
