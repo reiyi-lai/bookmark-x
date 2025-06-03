@@ -397,8 +397,8 @@ async function collectWithNewTurboMethod(mode: string, timingMilestone: number, 
               media
             });
 
-            // TEMPORARY: Stop at 1000 tweets for testing
-            if (tweets.length >= 500) {
+            // TEMPORARY: Stop at 200 tweets for testing
+            if (tweets.length >= 200) {
               const totalTime = (Date.now() - startTime) / 1000;
               console.log(`BookmarkBuddy: Reached temporary 500 tweet test limit in ${totalTime} seconds`);
               return tweets;
@@ -568,33 +568,13 @@ function showNotification(message: string, type: 'success' | 'error') {
 }
 
 function extractProfilePicture(tweetElement: Element): string {
-  const workingSelectors = [
-    '[data-testid="Tweet-User-Avatar"] img',
-    '[role="link"] img[alt]'                 
-  ];
-  
-  for (const selector of workingSelectors) {
-    try {
-      const imgElement = tweetElement.querySelector(selector) as HTMLImageElement;
-      if (imgElement?.src && imgElement.src.startsWith('http')) {
-        const src = imgElement.src;
-        if (src.includes('profile_images') || src.includes('pbs.twimg.com')) {
-          return src;
-        }
-      }
-    } catch (error) {
-      // Continue to next selector
-    }
-  }
-  
-  // Fallback: Construct profile picture URL from twitter handle
+  // Construct profile picture URL from twitter handle for speed
   try {
     const linkElement = tweetElement.querySelector('[role="link"]') as HTMLAnchorElement;
     if (linkElement?.href) {
       const handle = linkElement.href.split('/').pop();
       if (handle && handle !== 'photo' && handle !== 'status') {
-        const fallbackUrl = `https://unavatar.io/twitter/${handle}`;
-        return fallbackUrl;
+        return `https://unavatar.io/twitter/${handle}`;
       }
     }
   } catch (error) {
