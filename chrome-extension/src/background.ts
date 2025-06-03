@@ -4,11 +4,21 @@ chrome.runtime.onInstalled.addListener((details) => {
   console.log('BookmarkBuddy installed:', details.reason);
   
   if (details.reason === 'install') {
-    // Default settings on install
+    // TO DO: Default settings
     chrome.storage.local.set({
       autoCategorizationEnabled: true,
       defaultCategory: 'Uncategorized',
       lastSyncTime: null
+    });
+    
+    // Automatically navigate to Twitter/X bookmarks page after installation
+    chrome.tabs.create({ 
+      url: 'https://x.com/i/bookmarks',
+      active: true
+    }).then(() => {
+      console.log('BookmarkBuddy: Opened Twitter/X bookmarks page after installation');
+    }).catch((error) => {
+      console.error('BookmarkBuddy: Failed to open bookmarks page:', error);
     });
   }
 });

@@ -7,7 +7,7 @@ if (document.readyState === 'loading') {
 function initializeBookmarkBuddy() {
   addBookmarkButtonToHeader();
   
-  // To change: Go directly to the bookmarks page
+  // To change: Go directly to the bookmarks page (but shouldn't be active tab)
   let currentUrl = window.location.href;
   const urlObserver = new MutationObserver(() => {
     if (window.location.href !== currentUrl) {
@@ -19,12 +19,6 @@ function initializeBookmarkBuddy() {
 
 // Add bookmark button next to the page title
 function addBookmarkButtonToHeader() {
-  // Check if we're on the bookmarks page
-  if (!window.location.href.includes('/i/bookmarks')) {
-    console.log('BookmarkBuddy: Not on bookmarks page, skipping button addition');
-    return;
-  }
-  
   const pageTitle = findPageTitle();
   
   if (!pageTitle) {
