@@ -4,13 +4,6 @@ chrome.runtime.onInstalled.addListener((details) => {
   console.log('BookmarkBuddy installed:', details.reason);
   
   if (details.reason === 'install') {
-    // TO DO: Default settings
-    chrome.storage.local.set({
-      autoCategorizationEnabled: true,
-      defaultCategory: 'Uncategorized',
-      lastSyncTime: null
-    });
-    
     // Automatically navigate to Twitter/X bookmarks page after installation
     chrome.tabs.create({ 
       url: 'https://x.com/i/bookmarks',
@@ -43,16 +36,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 async function handleGetCategories(sendResponse: (response: any) => void) {
   try {
-    // TODO: Replace with Supabase integration
-    const mockCategories = [
-      { id: '1', name: 'Tech', description: 'Technology tweets' },
-      { id: '2', name: 'News', description: 'News and current events' },
-      { id: '3', name: 'Personal', description: 'Personal thoughts and updates' }
-    ];
+    console.log('BookmarkBuddy: Fetching categories from server...');
     
-    sendResponse({ success: true, categories: mockCategories });
+    const response = await fetch('http://localhost:5000/api/categories');
+    
+    if (!response.ok) {
+      throw new Error(`Server request failed: ${response.status}`);
+    }
+    
+    const categories = await response.json();
+    
+    console.log(`BookmarkBuddy: Retrieved ${categories.length} categories from server`);
+    
+    sendResponse({ success: true, categories });
   } catch (error) {
-    console.error('Error getting categories:', error);
+    console.error('BookmarkBuddy: Error getting categories from server:', error);
     sendResponse({ 
       success: false, 
       error: error instanceof Error ? error.message : 'Failed to get categories' 
@@ -64,88 +62,73 @@ async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (re
   try {
     console.log(`BookmarkBuddy: Processing ${rawTweetData.length} raw tweets...`);
     
-    const processedTweets: any[] = [];
-    let successCount = 0;
-    let errorCount = 0;
+    // Convert raw tweet data to the format expected by server
+    const importedBookmarks = rawTweetData
+      .map(processRawTweetData)
+      .filter(bookmark => bookmark !== null);
     
-    for (const rawTweet of rawTweetData) {
-      try {
-        const processedTweet = processRawTweetData(rawTweet);
-        if (processedTweet) {
-          processedTweets.push(processedTweet);
-          successCount++;
-        } else {
-          errorCount++;
-        }
-      } catch (error: unknown) {
-        console.error('BookmarkBuddy: Error processing individual tweet:', error);
-        errorCount++;
-      }
+    if (importedBookmarks.length === 0) {
+      throw new Error('No valid tweets to import');
     }
     
-    console.log(`BookmarkBuddy: Processing complete. Success: ${successCount}, Errors: ${errorCount}`);
+    console.log(`BookmarkBuddy: Sending ${importedBookmarks.length} bookmarks to server for ML categorization and storage...`);
     
-    // TODO: Send processed tweets to Supabase/backend
-    console.log('BookmarkBuddy: Sample processed tweets:', processedTweets.slice(0, 3));
+    // Send to server for ML categorization and storage
+    const response = await fetch('http://localhost:5000/api/bookmarks/import', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        bookmarks: importedBookmarks
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Server request failed: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    console.log(`BookmarkBuddy: Server processed bookmarks successfully:`, result.stats);
     
     sendResponse({
       success: true,
-      processedCount: successCount,
-      errorCount: errorCount,
-      data: processedTweets // You can remove this in production to save memory
+      processedCount: result.stats.total,
+      savedCount: result.stats.imported,
+      stats: result.stats
     });
     
   } catch (error: unknown) {
     console.error('BookmarkBuddy: Error in handleProcessTweetJSONBulk:', error);
     sendResponse({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error during processing'
     });
   }
 }
 
-// Process individual raw tweet data into structured format
+// Convert raw tweet data to ImportedBookmark format expected by server
 function processRawTweetData(rawTweet: any): any | null {
   try {
-    if (!rawTweet.tweetId || !rawTweet.tweetUrl) {
+    if (!rawTweet.tweetId || !rawTweet.tweetText) {
       return null;
     }
     
-    const processedDate = processTimestamp(rawTweet.time);
-    
     return {
-      tweetId: rawTweet.tweetId,
-      url: rawTweet.tweetUrl,
-      content: rawTweet.tweetText,
-      author: rawTweet.handle || '',
-      authorDisplayName: rawTweet.authorName || '',
-      authorProfilePicture: rawTweet.profilePicture || '',
-      tweetDate: processedDate,
-      bookmarkedAt: new Date().toISOString(),
-      mediaAttachments: rawTweet.media === 'has_media' ? [{ type: 'detected', detected: true }] : null,
-      
-      userId: null, // Set after authentication
-      tags: [], // Set by AI categorization later
-      category: null // Set by AI categorization
+      id: rawTweet.tweetId,
+      text: rawTweet.tweetText,
+      author_id: rawTweet.handle || 'unknown',
+      created_at: rawTweet.time || new Date().toISOString(),
+      author: {
+        id: rawTweet.handle || 'unknown',
+        name: rawTweet.authorName || 'Unknown Author',
+        username: rawTweet.handle || 'unknown',
+        profile_image_url: rawTweet.profilePicture || null
+      }
     };
   } catch (error: unknown) {
     console.error('BookmarkBuddy: Error processing raw tweet data:', error);
     return null;
-  }
-}
-
-function processTimestamp(timestamp: string): string {
-  if (!timestamp) {
-    return new Date().toISOString();
-  }
-  
-  try {
-    const date = new Date(timestamp);
-    if (isNaN(date.getTime())) {
-      return new Date().toISOString();
-    }
-    return date.toISOString();
-  } catch (error) {
-    return new Date().toISOString();
   }
 }
