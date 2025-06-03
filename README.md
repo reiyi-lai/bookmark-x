@@ -109,12 +109,19 @@ npm run supabase:types
 
 ### Chrome Extension Setup
 
-1. Build Chrome extension:
+1. Navigate to extension directory and install dependencies:
 ```bash
-npm run build:extension
+cd chrome-extension
+npm install
 ```
 
-2. Load extension in Chrome:
+2. Build the extension:
+```bash
+npm run build
+```
+
+3. Load extension in Chrome:
    - Go to `chrome://extensions/` on Chrome
    - Enable "Developer mode"
-   - Click "Load unpacked" and select `chrome-extension/dist` in project directory
+   - Click "Load unpacked"
+   - Select `chrome-extension/dist` in project folder
