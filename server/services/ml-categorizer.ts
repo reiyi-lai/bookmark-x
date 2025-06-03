@@ -192,14 +192,12 @@ class DeepSeekCategorizer extends BaseCategorizer {
       console.log('Trying DeepSeek model categorization...');
       const prompt = this.createPrompt(text);
       
-      // Use the InferenceClient to call the model with provider
       const result = await this.client.chatCompletion({
         provider: this.provider,
         model: this.modelId,
         messages: [{ role: 'user', content: prompt }]
       });
       
-      // Extract the generated text
       let generatedText = '';
       
       if (result && result.choices && result.choices.length > 0) {
