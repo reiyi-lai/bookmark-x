@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "../lib/queryClient";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { Bookmark } from "../lib/types";
 import { useToast } from "./use-toast";
 
@@ -9,6 +9,9 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
   const { toast } = useToast();
   const [selectedBookmark, setSelectedBookmark] = useState<Bookmark | null>(null);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+
+  // Check if redirected from extension
+  const isFromExtension = new URLSearchParams(window.location.search).get('source') === 'extension';
 
   // Construct the query params
   const queryParams = new URLSearchParams();
@@ -23,6 +26,7 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
   const {
     data: allBookmarks = [],
     isLoading: isLoadingAll,
+    refetch: refetchAll
   } = useQuery({
     queryKey: ["/api/bookmarks", "all"],
     queryFn: async () => {
@@ -44,7 +48,7 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
     data: bookmarks = [],
     isLoading,
     isError,
-    refetch,
+    refetch: refetchFiltered
   } = useQuery({
     queryKey: ["/api/bookmarks", categoryId, searchQuery],
     queryFn: async () => {
@@ -67,9 +71,38 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
     },
   });
 
+  // Sync bookmarks (refetch all data)
+  const { mutate: syncBookmarks, isPending: isSyncing } = useMutation({
+    mutationFn: async () => {
+      await refetchAll();
+      await refetchFiltered();
+      return true;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Bookmarks synced successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to sync bookmarks. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Auto-sync when redirected from extension
+  useEffect(() => {
+    if (isFromExtension) {
+      syncBookmarks();
+    }
+  }, [isFromExtension, syncBookmarks]);
+
   // Delete a bookmark
   const { mutate: deleteBookmark, isPending: isDeleting } = useMutation({
-    mutationFn: async (bookmarkId: number) => {
+    mutationFn: async (bookmarkId: string) => {
       return apiRequest({
         endpoint: `/api/bookmarks/${bookmarkId}`,
         method: "DELETE",
@@ -99,7 +132,7 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
       bookmarkId,
       categoryId,
     }: {
-      bookmarkId: number;
+      bookmarkId: string;
       categoryId: number;
     }) => {
       return apiRequest({
@@ -123,59 +156,6 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
       toast({
         title: "Error",
         description: "Failed to update category. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Sync bookmarks from Twitter
-  const { mutate: syncBookmarks, isPending: isSyncing } = useMutation({
-    mutationFn: async () => {
-      return apiRequest({
-        endpoint: "/api/bookmarks/sync",
-        method: "GET",
-        on401: "throw",
-      });
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bookmarks"] });
-      toast({
-        title: "Success",
-        description: `Synced ${data.bookmarksCount || 0} bookmarks from Twitter`,
-      });
-    },
-    onError: (error: Error) => {
-      console.error("Error syncing bookmarks:", error);
-      toast({
-        title: "Error",
-        description: "Failed to sync bookmarks. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Import bookmarks from JSON
-  const { mutate: importBookmarks, isPending: isImporting } = useMutation({
-    mutationFn: async (bookmarksData: any[]) => {
-      return apiRequest({
-        endpoint: "/api/bookmarks/import",
-        method: "POST",
-        data: { bookmarks: bookmarksData },
-        on401: "throw",
-      });
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bookmarks"] });
-      toast({
-        title: "Import Successful",
-        description: `Imported ${data.stats?.imported || 0} bookmarks`,
-      });
-    },
-    onError: (error: Error) => {
-      console.error("Error importing bookmarks:", error);
-      toast({
-        title: "Import Failed",
-        description: "Could not import bookmarks. Please check your file format.",
         variant: "destructive",
       });
     },
@@ -222,20 +202,18 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
     allBookmarks,
     isLoading: isLoading || isLoadingAll,
     isError,
-    refetch,
+    refetch: refetchFiltered,
     deleteBookmark,
     isDeleting,
     updateCategory,
     isUpdatingCategory,
-    syncBookmarks,
-    isSyncing,
-    importBookmarks,
-    isImporting,
     recategorizeBookmarks,
     isRecategorizing,
     selectedBookmark,
     categoryModalOpen,
     openCategoryModal,
     closeModal,
+    syncBookmarks,
+    isSyncing
   };
 }
