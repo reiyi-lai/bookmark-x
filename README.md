@@ -65,13 +65,13 @@ Bookmark-X helps you automatically organize your Twitter bookmarks into meaningf
 npm install
 ```
 
-2. Set up environment variables in `.env` file in root directory.
+2. Set up `.env` in root directory.
 ```
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 SUPABASE_PROJECT_REF=
 
-HUGGINGFACE_API_KEY=your_deepseek_api_key
+HUGGINGFACE_API_KEY=
 ```
 
 3. Start development server:
