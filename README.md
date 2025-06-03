@@ -47,19 +47,74 @@ Bookmark-X helps you automatically organize your Twitter bookmarks into meaningf
 
 - **Frontend**: React, Vite, TailwindCSS, Radix UI
 - **Backend**: Express.js, TypeScript
-- **Database**: (?)
+- **Database**: Supabase (PostgreSQL)
 - **ML**: currently DeepSeek, Embedding-based Similarity, TF-IDF + Keyword Matching
+- **Authentication**: Supabase Auth
 
-## 🔧 Development Setup
+## 🔧 Setup and Installation
 
+### Prerequisites
+
+- Node.js
+- npm
+- Chrome browser (for extension development)
+
+### Server and Web App Setup
 1. Install dependencies:
 ```bash
 npm install
 ```
 
-2. Set up environment variables in .env.
+2. Set up environment variables in `.env` file in root directory.
+```
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_PROJECT_REF=
+
+HUGGINGFACE_API_KEY=your_deepseek_api_key
+```
 
 3. Start development server:
 ```bash
 npm run dev
 ```
+Web app can be accesed at http://localhost:3000.
+
+### Supabase Setup
+
+1. Login to Supabase account:
+```bash
+npm run supabase:login
+```
+
+2. Initialize Supabase:
+```bash
+npm run supabase:init
+```
+
+3. Link Supabase project:
+```bash
+npm run supabase:link
+```
+
+4. Apply database migration (if any):
+```bash
+npm run supabase:push
+```
+
+5. Generate TypeScript types from Supabase:
+```bash
+npm run supabase:types
+```
+
+### Chrome Extension Setup
+
+1. Build Chrome extension:
+```bash
+npm run build:extension
+```
+
+2. Load extension in Chrome:
+   - Go to `chrome://extensions/` on Chrome
+   - Enable "Developer mode"
+   - Click "Load unpacked" and select `chrome-extension/dist` in project directory
