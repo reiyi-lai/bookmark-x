@@ -4,7 +4,7 @@ chrome.runtime.onInstalled.addListener((details) => {
   console.log('BookmarkBuddy installed:', details.reason);
   
   if (details.reason === 'install') {
-    // Automatically navigate to Twitter/X bookmarks page after installation
+    // Navigate to Twitter/X bookmarks page after installation
     chrome.tabs.create({ 
       url: 'https://x.com/i/bookmarks',
       active: true
@@ -25,38 +25,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message.type === 'GET_CATEGORIES') {
-    handleGetCategories(sendResponse);
-    return true;
-  }
-
   console.warn('Unknown message type:', message.type);
   sendResponse({ error: 'Unknown message type' });
 });
-
-async function handleGetCategories(sendResponse: (response: any) => void) {
-  try {
-    console.log('BookmarkBuddy: Fetching categories from server...');
-    
-    const response = await fetch('http://localhost:5000/api/categories');
-    
-    if (!response.ok) {
-      throw new Error(`Server request failed: ${response.status}`);
-    }
-    
-    const categories = await response.json();
-    
-    console.log(`BookmarkBuddy: Retrieved ${categories.length} categories from server`);
-    
-    sendResponse({ success: true, categories });
-  } catch (error) {
-    console.error('BookmarkBuddy: Error getting categories from server:', error);
-    sendResponse({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to get categories' 
-    });
-  }
-}
 
 async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (response: any) => void) {
   try {
@@ -74,7 +45,7 @@ async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (re
     console.log(`BookmarkBuddy: Sending ${importedBookmarks.length} bookmarks to server for ML categorization and storage...`);
     
     // Send to server for ML categorization and storage
-    const response = await fetch('http://localhost:5000/api/bookmarks/import', {
+    const response = await fetch('http://localhost:3000/api/bookmarks/import', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -91,6 +62,12 @@ async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (re
     const result = await response.json();
     
     console.log(`BookmarkBuddy: Server processed bookmarks successfully:`, result.stats);
+    
+    // Redirect to main site after successful processing
+    chrome.tabs.create({ 
+      url: 'http://localhost:3000/?source=extension',
+      active: true 
+    });
     
     sendResponse({
       success: true,
@@ -120,6 +97,8 @@ function processRawTweetData(rawTweet: any): any | null {
       text: rawTweet.tweetText,
       author_id: rawTweet.handle || 'unknown',
       created_at: rawTweet.time || new Date().toISOString(),
+      media_attachments: rawTweet.media === 'has_media' ? [{ type: 'detected' }] : null,
+      url: rawTweet.tweetUrl,
       author: {
         id: rawTweet.handle || 'unknown',
         name: rawTweet.authorName || 'Unknown Author',
