@@ -19,14 +19,14 @@ export interface Category {
 }
 
 export interface Bookmark {
-  id: number;
-  content: string;
+  id: string;
+  content: string | null;
   url: string;
-  userId: number;
+  userId: string | null;
   categoryId: number | null;
   tweetId: string;
-  authorName: string;
-  authorUsername: string;
+  authorName: string | null;
+  authorUsername: string | null;
   authorProfileImage: string | null;
   createdAt: Date;
   bookmarkedAt: Date;
