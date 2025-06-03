@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "BookmarkBuddy",
+  "version": "1.0.0",
+  "description": "AI-powered bookmark manager for Twitter/X posts",
+  
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  
+  "host_permissions": [
+    "https://x.com/*",
+    "https://twitter.com/*"
+  ],
+  
+  "background": {
+    "service_worker": "js/background.js"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["https://x.com/*", "https://twitter.com/*"],
+      "js": ["js/content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_title": "BookmarkBuddy",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*"],
+      "matches": ["https://x.com/*", "https://twitter.com/*"]
+    }
+  ]
+} 
