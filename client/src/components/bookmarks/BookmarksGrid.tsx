@@ -6,7 +6,7 @@ interface BookmarksGridProps {
   bookmarks: Bookmark[];
   isLoading: boolean;
   onChangeCategory: (bookmark: Bookmark) => void;
-  onDeleteBookmark: (id: number) => void;
+  onDeleteBookmark: (id: string) => void;
 }
 
 export default function BookmarksGrid({
