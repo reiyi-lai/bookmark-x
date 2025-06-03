@@ -6,6 +6,7 @@ import type { Bookmark } from "../../lib/types";
 import { CalendarIcon, Tag, Trash2, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { useCategories } from "../../hooks/useCategories";
+import { cleanTwitterHtml } from "@/lib/utils";
 
 interface BookmarkCardProps {
   bookmark: Bookmark;
@@ -21,17 +22,15 @@ export default function BookmarkCard({
   // Get categories data
   const { categories } = useCategories();
   
-  // Format the date
   const formattedDate = format(new Date(bookmark.createdAt), "MMM d, yyyy");
   
-  // Get category name
   const getCategoryName = () => {
     if (!bookmark.categoryId) return 'Uncategorized';
     const category = categories.find(c => c.id === bookmark.categoryId);
     return category ? category.name : 'Uncategorized';
   };
   
-  // Get the initials for the avatar fallback
+  // Fallback for profile picture
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -41,13 +40,11 @@ export default function BookmarkCard({
       .substring(0, 2);
   };
 
-  // Get category badge color based on the category name
   const getCategoryBadgeClass = () => {
     if (!bookmark.categoryId) return 'bg-gray-500/10 text-gray-500';
     
     const categoryId = bookmark.categoryId;
     
-    // Map category IDs to colors (assuming standard category IDs)
     switch (categoryId) {
       case 1: // Content Ideas
         return 'bg-blue-500/10 text-blue-500';
@@ -72,14 +69,14 @@ export default function BookmarkCard({
         <div className="flex items-start gap-3 mb-3">
           <Avatar className="h-10 w-10">
             {bookmark.authorProfileImage ? (
-              <AvatarImage src={bookmark.authorProfileImage} alt={bookmark.authorName} />
+              <AvatarImage src={bookmark.authorProfileImage} alt={bookmark.authorName || ''} />
             ) : (
-              <AvatarFallback>{getInitials(bookmark.authorName)}</AvatarFallback>
+              <AvatarFallback>{getInitials(cleanTwitterHtml(bookmark.authorName || ''))}</AvatarFallback>
             )}
           </Avatar>
           <div>
-            <h3 className="font-semibold">{bookmark.authorName}</h3>
-            <p className="text-sm text-muted-foreground">@{bookmark.authorUsername}</p>
+            <h3 className="font-semibold">{cleanTwitterHtml(bookmark.authorName || '')}</h3>
+            <p className="text-sm text-muted-foreground">@{bookmark.authorUsername || ''}</p>
           </div>
         </div>
         
