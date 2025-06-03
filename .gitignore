@@ -3,6 +3,7 @@ node_modules
 
 # Build
 dist
+extension-build
 server/public
 vite.config.ts.*
 
