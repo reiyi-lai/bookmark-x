@@ -1,4 +1,4 @@
-// Type definitions for the client
+// Type definitions for client
 export interface User {
   id: number;
   username: string;
@@ -9,14 +9,7 @@ export interface User {
   twitterTokenExpiry: Date | null;
 }
 
-export interface Category {
-  id: number;
-  name: string;
-  color: string;
-  order: number | null;
-  description: string | null;
-  icon: string;
-}
+export type { Category } from '@shared/schema';
 
 export interface Bookmark {
   id: string;
