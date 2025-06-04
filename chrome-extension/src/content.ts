@@ -135,8 +135,9 @@ async function handleBulkBookmark() {
     
     console.log('BookmarkBuddy: Starting intelligent tweet collection...');
     
-    // Collect all tweets as raw JSON data
-    const allTweetData = await collectAllTweetsAsJSON();
+    // Collect tweets
+    const startTime = Date.now();
+    const allTweetData = await collectWithNewTurboMethod(1500, startTime);
     
     console.log(`BookmarkBuddy: Collected ${allTweetData.length} tweets as raw JSON`);
     
@@ -170,262 +171,106 @@ async function handleBulkBookmark() {
   }
 }
 
-// Collect tweets with configurable modes - easy to test different approaches
-async function collectAllTweetsAsJSON(): Promise<any[]> {
-  const tweets: any[] = [];
-  const TIMING_MILESTONE = 1500; // Track time to reach this many tweets
-  const TEMP_TEST_LIMIT = 1000; // TEMPORARY: Testing limit
-  let reachedMilestone = false;
-  const startTime = Date.now();
-  
-  // TEMPORARY: To test scrolling mechanisms
-  let MODE: 'CONSERVATIVE' | 'TURBO_FAST' | 'TURBO_ULTRA' = 'TURBO_FAST';
-  
-  let scrollInterval: number;
-  let scrollStep: number;
-  let patienceLevel: number;
-  let useNewTurboMethod = false;
-  
-  // @ts-ignore - MODE can be changed for testing different modes
-  if (MODE === 'CONSERVATIVE') {
-    scrollInterval = 700;
-    scrollStep = 5500;
-    patienceLevel = 5;
-    useNewTurboMethod = false;
-    console.log('BookmarkBuddy: Starting CONSERVATIVE collection (most reliable)...');
-  // @ts-ignore - MODE can be changed for testing different modes  
-  } else if (MODE === 'TURBO_FAST') {
-    useNewTurboMethod = true;
-    console.log('BookmarkBuddy: Starting TURBO_FAST collection (150ms delays)...');
-  } else {
-    // TURBO_ULTRA
-    useNewTurboMethod = true;
-    console.log('BookmarkBuddy: Starting TURBO_ULTRA collection (100ms delays)...');
-  }
-  
-  if (useNewTurboMethod) {
-    const collectedTweets = await collectWithNewTurboMethod(MODE, TIMING_MILESTONE, startTime);
-    return collectedTweets;
-  }
-  
-  // CONSERVATIVE Mode
-  let previousTweetCount = 0;
-  let unchangedCount = 0;
-  let turboScrollCount = 0;
-  
-  return new Promise((resolve) => {
-    function updateTweets() {
-      const currentTweetElements = document.querySelectorAll('article[data-testid="tweet"]');
-      let newTweetsCount = 0;
-      
-      currentTweetElements.forEach(tweetElement => {
-        try {
-          const textElement = tweetElement.querySelector('[data-testid="tweetText"]');
-          const tweetText = textElement?.textContent || '';
-          
-          const isTweetNew = tweetText && !tweets.some(tweet => tweet.tweetText === tweetText);
-          
-          if (isTweetNew) {
-            const authorNameElement = tweetElement.querySelector('[data-testid="User-Name"] [dir="ltr"] span:first-child, [data-testid="User-Name"] span[dir="ltr"]:first-child, [data-testid="User-Name"] > div > div:first-child span');
-            
-            // TO SIMPLIFY: Extract HTML content to get both text and emoji images
-            let authorName = '';
-            if (authorNameElement) {
-              const htmlContent = authorNameElement.innerHTML || '';
-              authorName = htmlContent.split(/[@·]/)[0].trim();
-            }
-            
-            const linkElement = tweetElement.querySelector('[role="link"]') as HTMLAnchorElement;
-            const handle = linkElement?.href?.split('/').pop() || '';
-            
-            const timeElement = tweetElement.querySelector('time');
-            const time = timeElement?.getAttribute('datetime') || '';
-            
-            const statusLink = tweetElement.querySelector('a[href*="/status/"]') as HTMLAnchorElement;
-            const tweetUrl = statusLink?.href || '';
-            const tweetId = tweetUrl.split('/status/')[1]?.split('?')[0] || '';
-            
-            const hasMedia = tweetElement.querySelector('[data-testid="tweetPhoto"], [data-testid="videoPlayer"]') !== null;
-            const media = hasMedia ? 'has_media' : null;
-            
-            const profilePicture = extractProfilePicture(tweetElement);
-            
-            tweets.push({
-              tweetId,
-              tweetUrl,
-              authorName,
-              handle,
-              tweetText,
-              time,
-              profilePicture,
-              media
-            });
-            
-            newTweetsCount++;
-
-            if (!reachedMilestone && tweets.length >= TIMING_MILESTONE) {
-              const timeToMilestone = Date.now() - startTime;
-              console.log(`BookmarkBuddy: Reached ${TIMING_MILESTONE} tweets in ${timeToMilestone/1000} seconds (${MODE} mode)`);
-              reachedMilestone = true;
-            }
-
-            // TEMPORARY: Stop at 1000 tweets for testing
-            if (tweets.length >= 1000) {
-              const totalTime = (Date.now() - startTime) / 1000;
-              console.log(`BookmarkBuddy: Reached temporary 1000 tweet test limit in ${totalTime} seconds`);
-              return tweets;
-            }
-          }
-        } catch (error) {
-          // Silent error handling for speed
-        }
-      });
-      
-      // if (newTweetsCount > 0) {
-      //   let lastContentLoadTime = Date.now();
-      // }
-      
-      if (newTweetsCount > 0 && tweets.length % 50 === 0) {
-        console.log(`BookmarkBuddy: ${tweets.length} tweets collected (${MODE}) - ${newTweetsCount} new`);
-      }
-    }
-    
-    updateTweets();
-    
-    const observer = new MutationObserver(() => {
-      updateTweets();
-    });
-    
-    observer.observe(document.body, { childList: true, subtree: true });
-    
-    const scrollIntervalID = setInterval(() => {
-      window.scrollBy(0, scrollStep);
-      updateCollectionProgress(`${tweets.length} (${MODE})`);
-      turboScrollCount++;
-      
-      const currentTweetCount = tweets.length;
-      if (currentTweetCount === previousTweetCount) {
-        unchangedCount++;
-        
-        if (unchangedCount >= patienceLevel) {
-          const totalTime = (Date.now() - startTime) / 1000;
-          console.log(`BookmarkBuddy: ${MODE} collection complete - reached end of bookmarks!`);
-          console.log(`BookmarkBuddy: Collected ${tweets.length} tweets in ${totalTime} seconds (${MODE} mode)`);
-          clearInterval(scrollIntervalID);
-          observer.disconnect();
-          resolve(tweets);
-        }
-      } else {
-        unchangedCount = 0;
-      }
-      previousTweetCount = currentTweetCount;
-    }, scrollInterval);
-  });
+interface Tweet {
+  tweetId: string;
+  tweetUrl: string;
+  authorName: string;
+  handle: string;
+  tweetText: string;
+  time: string;
+  profilePicture: string;
+  media: 'has_media' | null;
 }
 
-// Turbo scroll mode
-async function collectWithNewTurboMethod(mode: string, timingMilestone: number, startTime: number): Promise<any[]> {
-  const allTweetElements = new Set<Element>();
-  const tweets: any[] = [];
+async function collectWithNewTurboMethod(timingMilestone: number, startTime: number): Promise<Tweet[]> {
+  const tweetMap = new Map<string, Tweet>();
   let consecutiveNoNewTweets = 0;
   let scrollAttempts = 0;
   let lastScrollHeight = 0;
   let reachedMilestone = false;
   
-  // Different delays for different turbo modes
-  const waitTime = mode === 'TURBO_ULTRA' ? 100 : 300; // 100ms for ultra, 300ms for fast
-  
-  console.log(`BookmarkBuddy: Starting fast tweet collection with optimized infinite scroll (${waitTime}ms delays)...`);
+  const waitTime = 300;
+  console.log('BookmarkBuddy: Starting tweet collection...');
   
   while (consecutiveNoNewTweets < 8) {
     const currentTweetElements = document.querySelectorAll('[data-testid="tweet"]');
-    const previousCount = allTweetElements.size;
+    const previousCount = tweetMap.size;
     
-    // TO FIX: theres's allTweetElements and tweets array now
-    currentTweetElements.forEach(tweet => allTweetElements.add(tweet));
-    
-    const newTweetsFound = allTweetElements.size - previousCount;
-    console.log(`BookmarkBuddy: +${newTweetsFound} tweets (total: ${allTweetElements.size})`);
-    
-    // TO FIX: double logging with consecutiveNoNewTweets
-    if (newTweetsFound === 0) {
-      consecutiveNoNewTweets++;
-    //   console.log(`BookmarkBuddy: No new tweets found (${consecutiveNoNewTweets}/8 attempts)`);
-    } else {
-      consecutiveNoNewTweets = 0;
-      
-      // Extract data from new tweets only
-      const newTweetArray = Array.from(allTweetElements).slice(tweets.length);
-      for (const tweetElement of newTweetArray) {
-        try {
-          const textElement = tweetElement.querySelector('[data-testid="tweetText"]');
-          const tweetText = textElement?.textContent || '';
+    for (const tweetElement of Array.from(currentTweetElements)) {
+      try {
+        const statusLink = tweetElement.querySelector('a[href*="/status/"]') as HTMLAnchorElement;
+        if (!statusLink?.href) continue;
+        
+        const tweetUrl = statusLink.href;
+        const tweetId = tweetUrl.split('/status/')[1]?.split('?')[0];
+        
+        // Skip duplicate tweets
+        if (!tweetId || tweetMap.has(tweetId)) continue;
+        
+        const textElement = tweetElement.querySelector('[data-testid="tweetText"]');
+        const tweetText = textElement?.textContent || '';
+        
+        if (tweetText) {
+          const authorNameElement = tweetElement.querySelector('[data-testid="User-Name"] [dir="ltr"] span:first-child, [data-testid="User-Name"] span[dir="ltr"]:first-child, [data-testid="User-Name"] > div > div:first-child span');
+          const htmlContent = authorNameElement?.innerHTML || '';
+          const authorName = htmlContent.split(/[@·]/)[0].trim();
           
-          if (tweetText) {
-            const authorNameElement = tweetElement.querySelector('[data-testid="User-Name"] [dir="ltr"] span:first-child, [data-testid="User-Name"] span[dir="ltr"]:first-child, [data-testid="User-Name"] > div > div:first-child span');
-            
-            // TO SIMPLIFY: Extract HTML content to get both text and emoji
-            let authorName = '';
-            if (authorNameElement) {
-              const htmlContent = authorNameElement.innerHTML || '';
-              authorName = htmlContent.split(/[@·]/)[0].trim();
-            }
-            
-            const linkElement = tweetElement.querySelector('[role="link"]') as HTMLAnchorElement;
-            const handle = linkElement?.href?.split('/').pop() || '';
-            
-            const timeElement = tweetElement.querySelector('time');
-            const time = timeElement?.getAttribute('datetime') || '';
-            
-            const statusLink = tweetElement.querySelector('a[href*="/status/"]') as HTMLAnchorElement;
-            const tweetUrl = statusLink?.href || '';
-            const tweetId = tweetUrl.split('/status/')[1]?.split('?')[0] || '';
-            
-            const hasMedia = tweetElement.querySelector('[data-testid="tweetPhoto"], [data-testid="videoPlayer"]') !== null;
-            const media = hasMedia ? 'has_media' : null;
-            
-            const profilePicture = extractProfilePicture(tweetElement);
-            
-            tweets.push({
-              tweetId,
-              tweetUrl,
-              authorName,
-              handle,
-              tweetText,
-              time,
-              profilePicture,
-              media
-            });
+          const linkElement = tweetElement.querySelector('[role="link"]') as HTMLAnchorElement;
+          const handle = linkElement?.href?.split('/').pop() || '';
+          
+          const timeElement = tweetElement.querySelector('time');
+          const time = timeElement?.getAttribute('datetime') || '';
+          
+          const hasMedia = tweetElement.querySelector('[data-testid="tweetPhoto"], [data-testid="videoPlayer"]') !== null;
+          const media = hasMedia ? 'has_media' : null;
+          
+          const profilePicture = extractProfilePicture(tweetElement);
+          
+          tweetMap.set(tweetId, {
+            tweetId,
+            tweetUrl,
+            authorName,
+            handle,
+            tweetText,
+            time,
+            profilePicture,
+            media
+          });
 
-            // TEMPORARY: Stop at 200 tweets for testing
-            if (tweets.length >= 200) {
-              const totalTime = (Date.now() - startTime) / 1000;
-              console.log(`BookmarkBuddy: Reached temporary 500 tweet test limit in ${totalTime} seconds`);
-              return tweets;
-            }
-
-            if (!reachedMilestone && tweets.length >= timingMilestone) {
-              const timeToMilestone = Date.now() - startTime;
-              console.log(`BookmarkBuddy: Reached ${timingMilestone} tweets in ${timeToMilestone/1000} seconds (${mode} mode)`);
-              reachedMilestone = true;
-            }
+          // TEMPORARY: Stop at 200 tweets for testing
+          if (tweetMap.size >= 200) {
+            const totalTime = (Date.now() - startTime) / 1000;
+            console.log(`BookmarkBuddy: Reached temporary 200 tweet test limit in ${totalTime} seconds`);
+            return Array.from(tweetMap.values());
           }
-        } catch (error) {
-          // Silent error handling
+
+          if (!reachedMilestone && tweetMap.size >= timingMilestone) {
+            const timeToMilestone = Date.now() - startTime;
+            console.log(`BookmarkBuddy: Reached ${timingMilestone} tweets in ${timeToMilestone/1000} seconds`);
+            reachedMilestone = true;
+          }
         }
+      } catch (error) {
+        console.error('BookmarkBuddy: Error processing tweet:', error);
       }
     }
     
-    // Check if we've reached the bottom by comparing scroll heights
+    const newTweetsFound = tweetMap.size - previousCount;
+    if (newTweetsFound > 0) {
+      console.log(`BookmarkBuddy: +${newTweetsFound} tweets (total: ${tweetMap.size})`);
+      consecutiveNoNewTweets = 0;
+      updateCollectionProgress(`${tweetMap.size}`);
+    } else {
+      consecutiveNoNewTweets++;
+    }
+    
+    // Check if we reached the bottom
     const currentScrollHeight = document.body.scrollHeight;
     const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
     const windowHeight = window.innerHeight;
-    
-    // More robust bottom detection
-    const isAtBottom = (currentScrollTop + windowHeight) >= (currentScrollHeight - 100); // 100px tolerance
+    const isAtBottom = (currentScrollTop + windowHeight) >= (currentScrollHeight - 100);
     
     if (currentScrollHeight === lastScrollHeight && isAtBottom && scrollAttempts > 5) {
-    //   consecutiveNoNewTweets++;
       console.log(`BookmarkBuddy: Reached bottom - incrementing no-new count to ${consecutiveNoNewTweets}`);
     }
     lastScrollHeight = currentScrollHeight;
@@ -435,21 +280,13 @@ async function collectWithNewTurboMethod(mode: string, timingMilestone: number, 
     
     // Wait for new content
     await new Promise(resolve => setTimeout(resolve, waitTime));
-    
     scrollAttempts++;
-    
-    // Update progress every 5 scrolls
-    if (scrollAttempts % 5 === 0) {
-      updateCollectionProgress(`${tweets.length} (${mode})`);
-    }
   }
   
   const totalTime = (Date.now() - startTime) / 1000;
-  console.log(`BookmarkBuddy: Stopped due to reaching end of bookmarks after ${consecutiveNoNewTweets} consecutive attempts with no new content`);
-  console.log(`BookmarkBuddy: Total scroll attempts: ${scrollAttempts}`);
-  console.log(`BookmarkBuddy: ${mode} collection complete!`);
-  console.log(`BookmarkBuddy: Collected ${tweets.length} tweets in ${totalTime} seconds (${mode} mode)`);
-  return tweets;
+  console.log(`BookmarkBuddy: Collection complete! ${tweetMap.size} tweets in ${totalTime} seconds`);
+  
+  return Array.from(tweetMap.values());
 }
 
 // Display collection progress via button
@@ -567,8 +404,8 @@ function showNotification(message: string, type: 'success' | 'error') {
   }, 4000);
 }
 
+// Construct profile picture URL from twitter handle for speed
 function extractProfilePicture(tweetElement: Element): string {
-  // Construct profile picture URL from twitter handle for speed
   try {
     const linkElement = tweetElement.querySelector('[role="link"]') as HTMLAnchorElement;
     if (linkElement?.href) {
