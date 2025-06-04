@@ -1,5 +1,7 @@
 console.log('BookmarkBuddy background script loaded');
 
+const SERVER_URL = 'http://localhost:3000';
+
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('BookmarkBuddy installed:', details.reason);
   
@@ -45,14 +47,14 @@ async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (re
     console.log(`BookmarkBuddy: Sending ${importedBookmarks.length} bookmarks to server for ML categorization and storage...`);
     
     // Send to server for ML categorization and storage
-    const response = await fetch('http://localhost:3000/api/bookmarks/import', {
+    const response = await fetch(`${SERVER_URL}/api/bookmarks/import`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         bookmarks: importedBookmarks
-      }),
+      })
     });
     
     if (!response.ok) {
@@ -60,12 +62,11 @@ async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (re
     }
     
     const result = await response.json();
-    
     console.log(`BookmarkBuddy: Server processed bookmarks successfully:`, result.stats);
     
     // Redirect to main site after successful processing
     chrome.tabs.create({ 
-      url: 'http://localhost:3000/?source=extension',
+      url: `${SERVER_URL}/?source=extension`,
       active: true 
     });
     
@@ -80,7 +81,7 @@ async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (re
     console.error('BookmarkBuddy: Error in handleProcessTweetJSONBulk:', error);
     sendResponse({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error during processing'
+      error: error instanceof Error ? error.message : 'Failed to connect to the server'
     });
   }
 }
