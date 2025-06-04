@@ -212,8 +212,7 @@ async function collectWithNewTurboMethod(timingMilestone: number, startTime: num
         
         if (tweetText) {
           const authorNameElement = tweetElement.querySelector('[data-testid="User-Name"] [dir="ltr"] span:first-child, [data-testid="User-Name"] span[dir="ltr"]:first-child, [data-testid="User-Name"] > div > div:first-child span');
-          const htmlContent = authorNameElement?.innerHTML || '';
-          const authorName = htmlContent.split(/[@·]/)[0].trim();
+          const authorName = authorNameElement?.innerHTML.trim() || '';
           
           const linkElement = tweetElement.querySelector('[role="link"]') as HTMLAnchorElement;
           const handle = linkElement?.href?.split('/').pop() || '';
