@@ -11,52 +11,52 @@ export type Database = {
     Tables: {
       bookmarks: {
         Row: {
-          author_display_name: string | null
+          author_display_name: string
           author_profile_picture: string | null
-          author_username: string | null
-          category_id: number | null
+          author_username: string
+          category_id: number
           created_at: string | null
           id: string
           last_synced_at: string | null
           media_attachments: Json | null
-          tweet_content: string | null
-          tweet_date: string | null
+          tweet_content: string
+          tweet_date: string
           tweet_id: string
           tweet_url: string
           updated_at: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
-          author_display_name?: string | null
+          author_display_name: string
           author_profile_picture?: string | null
-          author_username?: string | null
-          category_id?: number | null
+          author_username: string
+          category_id?: number
           created_at?: string | null
           id?: string
           last_synced_at?: string | null
           media_attachments?: Json | null
-          tweet_content?: string | null
-          tweet_date?: string | null
+          tweet_content: string
+          tweet_date: string
           tweet_id: string
           tweet_url: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
-          author_display_name?: string | null
+          author_display_name?: string
           author_profile_picture?: string | null
-          author_username?: string | null
-          category_id?: number | null
+          author_username?: string
+          category_id?: number
           created_at?: string | null
           id?: string
           last_synced_at?: string | null
           media_attachments?: Json | null
-          tweet_content?: string | null
-          tweet_date?: string | null
+          tweet_content?: string
+          tweet_date?: string
           tweet_id?: string
           tweet_url?: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -102,7 +102,7 @@ export type Database = {
       users: {
         Row: {
           created_at: string | null
-          email: string | null
+          email: string
           id: string
           twitter_id: string
           twitter_username: string
@@ -110,7 +110,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
-          email?: string | null
+          email: string
           id?: string
           twitter_id: string
           twitter_username: string
@@ -118,7 +118,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
-          email?: string | null
+          email?: string
           id?: string
           twitter_id?: string
           twitter_username?: string
