@@ -40,3 +40,18 @@ export const enrichCategoryWithMetadata = (dbCategory: DatabaseCategory): Catego
   icon: CATEGORY_METADATA[dbCategory.name]?.icon || "help_outline",
   order: CATEGORY_METADATA[dbCategory.name]?.order || 999
 });
+
+export interface ImportedBookmark {
+  id: string;
+  text: string;
+  author_id: string;
+  created_at: string;
+  media_attachments?: any[] | null;
+  url: string;
+  author: {
+    id: string;
+    name: string;
+    username: string;
+    profile_image_url?: string | null;
+  };
+}

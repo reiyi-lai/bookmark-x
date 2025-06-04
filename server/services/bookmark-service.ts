@@ -1,21 +1,6 @@
 import { createCategorizer } from './ml-categorizer';
 import { createClient } from '@supabase/supabase-js';
-import type { Category } from '@shared/schema';
-
-interface ImportedBookmark {
-  id: string;
-  text: string;
-  author_id: string;
-  created_at: string;
-  media_attachments?: any[] | null;
-  url: string;
-  author?: {
-    id: string;
-    name: string;
-    username: string;
-    profile_image_url?: string | null;
-  };
-}
+import type { Category, ImportedBookmark } from '@shared/schema';
 
 export interface ProcessedBookmark extends ImportedBookmark {
   categoryId: number;
