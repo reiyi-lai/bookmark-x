@@ -18,10 +18,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Import from Chrome extension
   app.post("/api/bookmarks/import", async (req: Request, res: Response) => {
     try {
-      const { bookmarks: importedBookmarks } = req.body;
+      const { bookmarks: importedBookmarks, twitterUser } = req.body;
       
       if (!Array.isArray(importedBookmarks)) {
         return res.status(400).json({ error: "Invalid bookmark data" });
+      }
+
+      if (!twitterUser?.id || !twitterUser?.username) {
+        return res.status(400).json({ error: "Twitter user info required" });
+      }
+
+      // First, get or create user
+      let { data: existingUser, error: userLookupError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('twitter_id', twitterUser.id)
+        .single();
+
+      if (userLookupError && userLookupError.code !== 'PGRST116') { // PGRST116 is "not found"
+        throw userLookupError;
+      }
+
+      let userId: string;
+      
+      if (!existingUser) {
+        // Create new user with Twitter info only
+        const userData = {
+          twitter_id: twitterUser.id,
+          twitter_username: twitterUser.username
+        };
+
+        const { data: newUser, error: createError } = await supabase
+          .from('users')
+          .insert(userData)
+          .select('id')
+          .single();
+
+        if (createError) {
+          throw createError;
+        }
+        
+        userId = newUser.id;
+      } else {
+        userId = existingUser.id;
       }
 
       const { bookmarks: processedBookmarks, categories } = await BookmarkService.processBookmarks(importedBookmarks);
@@ -45,6 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .from('bookmarks')
             .select('id')
             .eq('tweet_id', bookmark.id)
+            .eq('user_id', userId)
             .single();
 
           if (existing) {
@@ -56,33 +96,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
             tweet_id: bookmark.id,
             tweet_url: bookmark.url,
             tweet_content: bookmark.text,
-            author_username: bookmark.author?.username || 'unknown',
-            author_display_name: bookmark.author?.name || 'Unknown Author',
-            author_profile_picture: bookmark.author?.profile_image_url,
+            author_username: bookmark.author.username,
+            author_display_name: bookmark.author.name,
+            author_profile_picture: bookmark.author.profile_image_url,
             tweet_date: bookmark.created_at,
             category_id: bookmark.categoryId,
-            media_attachments: bookmark.media_attachments || null
+            media_attachments: bookmark.media_attachments,
+            user_id: userId
           };
 
           // Save to Supabase
-          const { data: savedBookmark, error: insertError } = await supabase
+          const { error: insertError } = await supabase
             .from('bookmarks')
-            .insert(bookmarkData)
-            .select()
-            .single();
+            .insert(bookmarkData);
 
           if (insertError) {
             console.error(`Error saving bookmark ${bookmark.id}:`, insertError);
             continue;
           }
 
-          console.log('Successfully saved bookmark:', savedBookmark);
-
           // Update statistics
           stats.imported++;
-          if (bookmark.categoryId) {
-            stats.categorized[bookmark.categoryId] = (stats.categorized[bookmark.categoryId] || 0) + 1;
-          }
+          stats.categorized[bookmark.categoryId] = (stats.categorized[bookmark.categoryId] || 0) + 1;
         } catch (error) {
           console.error(`Error processing bookmark ${bookmark.id}:`, error);
         }
@@ -90,11 +125,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ 
         success: true, 
-        stats: stats 
+        stats: stats,
+        userId: userId
       });
     } catch (error) {
       console.error("Error importing bookmarks:", error);
       res.status(500).json({ error: "Failed to import bookmarks" });
+    }
+  });
+
+  // Complete user registration with email
+  app.post("/api/users/:userId/complete-registration", async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+
+      // Check if user exists
+      const { data: existingUser, error: userError } = await supabase
+        .from('users')
+        .select('id, email')
+        .eq('id', userId)
+        .single();
+
+      if (userError) {
+        throw userError;
+      }
+
+      if (!existingUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (existingUser.email) {
+        return res.status(400).json({ error: "User already has an email registered" });
+      }
+
+      // Update user with email
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ email })
+        .eq('id', userId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      res.json({ 
+        success: true,
+        message: "Registration completed successfully"
+      });
+    } catch (error) {
+      console.error("Error completing registration:", error);
+      res.status(500).json({ error: "Failed to complete registration" });
     }
   });
 
@@ -157,12 +242,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete a bookmark
   app.delete("/api/bookmarks/:id", async (req: Request, res: Response) => {
     try {
-      const bookmarkId = req.params.id;
+      const bookmarkId = parseInt(req.params.id);
       
+      if (isNaN(bookmarkId)) {
+        return res.status(400).json({ error: "Invalid bookmark ID" });
+      }
+
       const { error } = await supabase
         .from('bookmarks')
         .delete()
-        .eq('id', bookmarkId);
+        .eq('id', bookmarkId)
+        .eq('user_id', 'chrome_extension_user');
 
       if (error) {
         throw error;
@@ -178,17 +268,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update bookmark category
   app.patch("/api/bookmarks/:id/category", async (req: Request, res: Response) => {
     try {
-      const bookmarkId = req.params.id;
+      const bookmarkId = parseInt(req.params.id);
       const { categoryId } = req.body;
       
-      if (!categoryId) {
-        return res.status(400).json({ error: "Invalid category ID" });
+      if (isNaN(bookmarkId) || !categoryId) {
+        return res.status(400).json({ error: "Invalid bookmark ID or category ID" });
       }
 
       const { error } = await supabase
         .from('bookmarks')
         .update({ category_id: categoryId })
-        .eq('id', bookmarkId);
+        .eq('id', bookmarkId)
+        .eq('user_id', 'chrome_extension_user');
 
       if (error) {
         throw error;
