@@ -2,7 +2,8 @@ import { Card, CardContent, CardFooter } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
-import type { Bookmark } from "../../lib/types";
+import type { ClientBookmark as Bookmark } from "@shared/schema";
+import { cleanTwitterHtml } from "@shared/utils";
 import { CalendarIcon, Tag, Trash2, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { useCategories } from "../../hooks/useCategories";
@@ -11,26 +12,6 @@ interface BookmarkCardProps {
   bookmark: Bookmark;
   onChangeCategory: () => void;
   onDelete: () => void;
-}
-
-// Clean HTML content from Twitter text (emojis, etc)
-function cleanTwitterHtml(htmlContent: string): string {
-  if (!htmlContent) return '';
-  
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = htmlContent;
-  
-  const result = Array.from(tempDiv.childNodes).map(node => {
-      const element = node as HTMLElement;
-      if (element.tagName === 'IMG') {
-        return element.getAttribute('alt') || '';
-      }
-      if (element.tagName === 'SPAN') {
-        return element.textContent || '';
-      }
-  }).join('');
-  
-  return result.trim();
 }
 
 export default function BookmarkCard({
