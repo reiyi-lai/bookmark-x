@@ -5,33 +5,49 @@ if (document.readyState === 'loading') {
 }
 
 function initializeBookmarkBuddy() {
-  addBookmarkButtonToHeader();
+  addSyncButton();
   
-  // To change: Go directly to the bookmarks page (but shouldn't be active tab)
+  // Watch for URL changes
   let currentUrl = window.location.href;
   const urlObserver = new MutationObserver(() => {
     if (window.location.href !== currentUrl) {
       currentUrl = window.location.href;
-      setTimeout(addBookmarkButtonToHeader, 500); // Let page content load
+      setTimeout(addSyncButton, 500); // Let page content load
     }
   });
 }
 
-// Add bookmark button next to the page title
-function addBookmarkButtonToHeader() {
-  const pageTitle = findPageTitle();
-  
-  if (!pageTitle) {
-    setTimeout(addBookmarkButtonToHeader, 1000);
-    return;
-  }
-  
+// Add sync button to the bookmarks page header
+function addSyncButton() {
+  // Don't add if button already exists
   if (document.querySelector('.bookmarkbuddy-header-btn')) {
     return;
   }
-  
+
+  // Find the "Bookmarks" title element
+  const titleElement = findPageTitle();
+  if (!titleElement) {
+    setTimeout(addSyncButton, 1000); // Retry if title not found
+    return;
+  }
+
+  // Create and insert the button
   const button = createHeaderButton();
-  insertButtonNearTitle(pageTitle, button);
+  const titleParent = titleElement.parentElement;
+  
+  if (titleParent) {
+    // Create a flex container for title and button
+    const container = document.createElement('div');
+    container.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+    
+    // Replace title with container and add both elements
+    titleParent.insertBefore(container, titleElement);
+    container.appendChild(titleElement);
+    container.appendChild(button);
+  } else {
+    // Fallback: insert after title
+    titleElement.insertAdjacentElement('afterend', button);
+  }
 }
 
 // Find page title "Bookmarks"
@@ -66,62 +82,45 @@ function findPageTitle(): Element | null {
 function createHeaderButton(): HTMLElement {
   const button = document.createElement('button');
   button.className = 'bookmarkbuddy-header-btn';
-  button.innerHTML = `
-    <div style="
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
-      background: rgb(29, 155, 240);
-      color: white;
-      border: none;
-      border-radius: 20px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background-color 0.2s;
-      margin-left: 16px;
-    "
-    onmouseover="this.style.backgroundColor='rgb(26, 140, 216)'"
-    onmouseout="this.style.backgroundColor='rgb(29, 155, 240)'"
-    title="Save all bookmarks to BookmarkBuddy">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M19 21V5C19 3.9 18.1 3 17 3H7C5.9 3 5 3.9 5 5V21L12 18L19 21Z" 
-              stroke="currentColor" stroke-width="2" fill="currentColor"/>
-      </svg>
-      <span>Sync to Bookmark-X</span>
-    </div>
+  button.style.cssText = `
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: rgb(14 165 233);
+    color: white;
+    border: none;
+    border-radius: 9999px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: -apple-system, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-left: 16px;
+    line-height: 1.2;
   `;
+  
+  button.innerHTML = `
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M19 21V5C19 3.9 18.1 3 17 3H7C5.9 3 5 3.9 5 5V21L12 18L19 21Z" 
+            stroke="currentColor" stroke-width="2" fill="currentColor"/>
+    </svg>
+    <span>Sync to Bookmark-X</span>
+  `;
+  
+  // Add hover effect
+  button.addEventListener('mouseover', () => {
+    button.style.backgroundColor = 'rgb(2 132 199)';
+  });
+  
+  button.addEventListener('mouseout', () => {
+    button.style.backgroundColor = 'rgb(14 165 233)';
+  });
   
   // Add click handler
   button.addEventListener('click', handleBulkBookmark);
   
   return button;
-}
-
-// Insert button near the page title
-function insertButtonNearTitle(titleElement: Element, button: HTMLElement) {
-  // Try to find a good parent container
-  const titleParent = titleElement.parentElement;
-  
-  if (titleParent) {
-    // If parent has flex display, add button as sibling
-    const titleParentStyle = window.getComputedStyle(titleParent);
-    if (titleParentStyle.display === 'flex') {
-      titleParent.appendChild(button);
-    } else {
-      // Create a wrapper to put title and button side by side
-      const wrapper = document.createElement('div');
-      wrapper.style.cssText = 'display: flex; align-items: center; justify-content: space-between; width: 100%;';
-      
-      titleParent.insertBefore(wrapper, titleElement);
-      wrapper.appendChild(titleElement);
-      wrapper.appendChild(button);
-    }
-  } else {
-    // Fallback: insert after title element
-    titleElement.insertAdjacentElement('afterend', button);
-  }
 }
 
 // Listen for messages from popup
