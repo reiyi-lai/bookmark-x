@@ -124,6 +124,43 @@ function insertButtonNearTitle(titleElement: Element, button: HTMLElement) {
   }
 }
 
+// Listen for messages from popup
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'CHECK_TWITTER_AUTH') {
+    getTwitterUserInfo().then(userInfo => {
+      sendResponse({ isAuthenticated: !!userInfo });
+    });
+    return true; // Keep channel open for async response
+  }
+});
+
+// Add this function to get Twitter user info
+async function getTwitterUserInfo(): Promise<{ id: string; username: string } | null> {
+  try {
+    // Look for initial state data in script tags
+    const scripts = Array.from(document.getElementsByTagName('script'));
+    const stateScript = scripts.find(s => s.textContent?.includes('"screen_name"'));
+    
+    if (stateScript?.textContent) {
+      // Extract both username and ID using a single regex
+      const match = stateScript.textContent.match(/"screen_name":"([^"]+)".+"id_str":"(\d+)"/);
+      if (match) {
+        return {
+          username: match[1],
+          id: match[2]
+        };
+      }
+    }
+
+    console.warn('BookmarkBuddy: Could not find Twitter user info in initial state');
+    return null;
+
+  } catch (error) {
+    console.error('BookmarkBuddy: Error getting Twitter user info:', error);
+    return null;
+  }
+}
+
 // Handle bulk bookmark operation - collect raw JSON first, process in background
 async function handleBulkBookmark() {
   try {
@@ -132,6 +169,20 @@ async function handleBulkBookmark() {
     
     // Show loading state
     showButtonLoading(button, true);
+    
+    // Get Twitter user info first
+    const twitterUser = await getTwitterUserInfo();
+    if (!twitterUser) {
+      showNotification('Please make sure you are logged into Twitter/X', 'error');
+      showButtonLoading(button, false);
+      return;
+    }
+
+    // Send Twitter user info to background script
+    await chrome.runtime.sendMessage({
+      type: 'SET_TWITTER_USER',
+      data: twitterUser
+    });
     
     console.log('BookmarkBuddy: Starting intelligent tweet collection...');
     
