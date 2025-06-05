@@ -5,6 +5,8 @@ import { Toaster } from "./components/ui/toaster";
 import NotFound from "./pages/not-found";
 import Home from "./pages/home";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import { EmailSignupHandler } from "./components/auth/EmailSignupHandler";
 
 function Router() {
   return (
@@ -15,15 +17,16 @@ function Router() {
   );
 }
 
-function App() {
+export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <AuthProvider>
       <ThemeProvider>
         <Router />
+          <EmailSignupHandler />
         <Toaster />
       </ThemeProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
-
-export default App;
