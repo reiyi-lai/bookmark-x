@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
-import type { Category, Bookmark } from "../../lib/types";
+import type { Category, ClientBookmark as Bookmark } from "@shared/schema";
 import { RefreshCw } from "lucide-react";
 
 interface CategoryModalProps {
