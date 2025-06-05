@@ -57,10 +57,10 @@ export function EmailSignupModal({ isOpen, onSubmit, onClose }: EmailSignupModal
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Welcome to BookmarkBuddy!</DialogTitle>
-          <DialogDescription>
-            Enter your email to access and save your organized bookmarks:
-          </DialogDescription>
+          <DialogTitle>Enter your email to save your bookmarks!</DialogTitle>
+          {/* <DialogDescription>
+            This is so you can save and access your organized bookmarks.
+          </DialogDescription> */}
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
