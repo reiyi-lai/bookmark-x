@@ -297,10 +297,10 @@ async function collectWithNewTurboMethod(timingMilestone: number, startTime: num
             media
           });
 
-          // TEMPORARY: Stop at 200 tweets for testing
-          if (tweetMap.size >= 200) {
+          // TEMPORARY: Stop at 300 tweets for testing
+          if (tweetMap.size >= 300) {
             const totalTime = (Date.now() - startTime) / 1000;
-            console.log(`BookmarkBuddy: Reached temporary 200 tweet test limit in ${totalTime} seconds`);
+            console.log(`BookmarkBuddy: Reached temporary 300 tweet test limit in ${totalTime} seconds`);
             return Array.from(tweetMap.values());
           }
 
