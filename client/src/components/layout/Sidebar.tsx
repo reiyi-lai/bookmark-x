@@ -36,9 +36,9 @@ export default function Sidebar({
     <aside
       className={`${
         showSidebar ? "translate-x-0" : "-translate-x-full"
-      } w-64 bg-white dark:bg-dark-200 h-screen border-r border-gray-200 dark:border-dark-300 transition-transform duration-300 ease-in-out fixed lg:static z-30`}
+      } w-64 bg-white dark:bg-gray-900 h-screen border-r border-gray-200 dark:border-gray-800 transition-transform duration-300 ease-in-out fixed lg:static z-30`}
     >
-      <div className="p-4 border-b border-gray-200 dark:border-dark-300 flex items-center">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center">
         <h1 className="text-xl font-bold text-twitterBlue flex items-center">
           <Bookmark className="h-5 w-5 mr-2" />
           Bookmark Organizer
@@ -47,7 +47,7 @@ export default function Sidebar({
           onClick={closeSidebar}
           variant="ghost"
           size="icon"
-          className="ml-auto p-1 rounded-full text-gray-500 hover:bg-gray-100 lg:hidden dark:hover:bg-dark-300"
+          className="ml-auto p-1 rounded-full text-gray-500 hover:bg-gray-100 lg:hidden dark:text-gray-400 dark:hover:bg-gray-800"
           aria-label="Close Sidebar"
         >
           <X className="h-5 w-5" />
@@ -79,13 +79,13 @@ export default function Sidebar({
                 variant="ghost"
                 className={`flex items-center w-full px-3 py-2 rounded-lg mb-1 transition-colors text-left ${
                   selectedCategoryId === 0
-                    ? "bg-gray-100 text-twitterBlue dark:bg-dark-300"
-                    : "hover:bg-gray-50 dark:hover:bg-dark-300"
+                    ? "bg-gray-100 text-twitterBlue dark:bg-gray-800 dark:text-blue-400"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-300"
                 }`}
               >
-                <span className="text-gray-500 mr-2 flex items-center">{getMaterialIcon("widgets")}</span>
+                <span className="text-gray-500 dark:text-gray-400 mr-2 flex items-center">{getMaterialIcon("widgets")}</span>
                 All Bookmarks
-                <span className="ml-auto bg-gray-200 dark:bg-dark-400 text-gray-700 dark:text-gray-300 text-xs rounded-full px-2 py-0.5">
+                <span className="ml-auto bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full px-2 py-0.5">
                   {Object.values(categoryCount).reduce((sum, count) => sum + count, 0)}
                 </span>
               </Button>
@@ -98,26 +98,26 @@ export default function Sidebar({
                   variant="ghost"
                   className={`flex items-center w-full px-3 py-2 rounded-lg mb-1 transition-colors text-left ${
                     selectedCategoryId === category.id
-                      ? "bg-gray-100 text-twitterBlue dark:bg-dark-300"
-                      : "hover:bg-gray-50 dark:hover:bg-dark-300"
+                      ? "bg-gray-100 text-twitterBlue dark:bg-gray-800 dark:text-blue-400"
+                      : "hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-300"
                   }`}
                 >
                   <span 
                     className={`mr-2 flex items-center ${
-                      category.name === "Content Ideas" ? "text-purple-500" :
-                      category.name === "Automation Tools" ? "text-blue-500" :
-                      category.name === "Interesting Reads" ? "text-green-500" :
-                      category.name === "Career Tips" ? "text-orange-500" :
-                      category.name === "Job Opportunities" ? "text-indigo-500" :
-                      category.name === "Good Quotes" ? "text-yellow-500" :
-                      category.name === "Knowledge/Trivia" ? "text-red-500" :
-                      "text-gray-500"
+                      category.name === "Content Ideas" ? "text-purple-500 dark:text-purple-400" :
+                      category.name === "Automation Tools" ? "text-blue-500 dark:text-blue-400" :
+                      category.name === "Interesting Reads" ? "text-green-500 dark:text-green-400" :
+                      category.name === "Career Tips" ? "text-orange-500 dark:text-orange-400" :
+                      category.name === "Job Opportunities" ? "text-indigo-500 dark:text-indigo-400" :
+                      category.name === "Good Quotes" ? "text-yellow-500 dark:text-yellow-400" :
+                      category.name === "Knowledge/Trivia" ? "text-red-500 dark:text-red-400" :
+                      "text-gray-500 dark:text-gray-400"
                     }`}
                   >
                     {getMaterialIcon(category.icon)}
                   </span>
                   {category.name}
-                  <span className="ml-auto bg-gray-200 dark:bg-dark-400 text-gray-700 dark:text-gray-300 text-xs rounded-full px-2 py-0.5">
+                  <span className="ml-auto bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full px-2 py-0.5">
                     {categoryCount[category.id] || 0}
                   </span>
                 </Button>
@@ -126,7 +126,7 @@ export default function Sidebar({
           )}
         </div>
 
-        <Separator className="border-gray-200 dark:border-dark-300 my-4" />
+        <Separator className="border-gray-200 dark:border-gray-800 my-4" />
 
         <div className="pt-2">
           <h2 className="uppercase text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 tracking-wider">
@@ -149,7 +149,7 @@ export default function Sidebar({
           <Button
             // onClick={() => logout()}
             variant="ghost"
-            className="flex items-center w-full px-3 py-2 rounded-lg mt-4 transition-colors text-left text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+            className="flex items-center w-full px-3 py-2 rounded-lg mt-4 transition-colors text-left text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
           >
             <LogOut className="h-4 w-4 mr-2" />
             Logout
