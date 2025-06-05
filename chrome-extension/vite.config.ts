@@ -7,13 +7,18 @@ export default defineConfig({
       input: {
         background: path.resolve(__dirname, 'src/background.ts'),
         content: path.resolve(__dirname, 'src/content.ts'),
-        // popup: path.resolve(__dirname, 'src/popup/index.html'),
-        // 'popup-script': path.resolve(__dirname, 'src/popup/popup.ts'),
+        popup: path.resolve(__dirname, 'src/popup/index.html'),
+        'popup-script': path.resolve(__dirname, 'src/popup/popup.ts'),
       },
       output: {
         entryFileNames: 'js/[name].js',
         chunkFileNames: 'js/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash][extname]',
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name === 'index.html') {
+            return 'popup/index.html';
+          }
+          return 'assets/[name]-[hash][extname]';
+        },
         format: 'es',
       },
       external: ['chrome']
