@@ -84,38 +84,49 @@ function createHeaderButton(): HTMLElement {
   button.className = 'bookmarkbuddy-header-btn';
   button.style.cssText = `
     display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
-    background: rgb(14 165 233);
-    color: white;
-    border: none;
-    border-radius: 9999px;
-    font-size: 14px;
-    font-weight: 600;
-    font-family: -apple-system, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    cursor: pointer;
-    transition: background-color 0.2s;
     margin-left: 16px;
-    line-height: 1.2;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
   `;
   
   button.innerHTML = `
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M19 21V5C19 3.9 18.1 3 17 3H7C5.9 3 5 3.9 5 5V21L12 18L19 21Z" 
-            stroke="currentColor" stroke-width="2" fill="currentColor"/>
-    </svg>
-    <span>Sync to Bookmark-X</span>
+    <div style="
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 14px;
+      background: rgb(14 165 233);
+      color: white;
+      border: none;
+      border-radius: 9999px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      line-height: 1.2;
+    ">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M19 21V5C19 3.9 18.1 3 17 3H7C5.9 3 5 3.9 5 5V21L12 18L19 21Z" 
+              stroke="currentColor" stroke-width="2" fill="currentColor"/>
+      </svg>
+      <span>Sync to Bookmark-X</span>
+    </div>
   `;
   
-  // Add hover effect
-  button.addEventListener('mouseover', () => {
-    button.style.backgroundColor = 'rgb(2 132 199)';
-  });
-  
-  button.addEventListener('mouseout', () => {
-    button.style.backgroundColor = 'rgb(14 165 233)';
-  });
+  // Add hover effect to the inner div
+  const buttonContent = button.querySelector('div');
+  if (buttonContent) {
+    buttonContent.addEventListener('mouseover', () => {
+      (buttonContent as HTMLElement).style.backgroundColor = 'rgb(2 132 199)';
+    });
+    
+    buttonContent.addEventListener('mouseout', () => {
+      (buttonContent as HTMLElement).style.backgroundColor = 'rgb(14 165 233)';
+    });
+  }
   
   // Add click handler
   button.addEventListener('click', handleBulkBookmark);
@@ -239,7 +250,7 @@ async function collectWithNewTurboMethod(timingMilestone: number, startTime: num
   let lastScrollHeight = 0;
   let reachedMilestone = false;
   
-  const waitTime = 300;
+  const waitTime = 175;
   console.log('BookmarkBuddy: Starting tweet collection...');
   
   while (consecutiveNoNewTweets < 8) {
@@ -319,7 +330,7 @@ async function collectWithNewTurboMethod(timingMilestone: number, startTime: num
     const windowHeight = window.innerHeight;
     const isAtBottom = (currentScrollTop + windowHeight) >= (currentScrollHeight - 100);
     
-    if (currentScrollHeight === lastScrollHeight && isAtBottom && scrollAttempts > 5) {
+    if (currentScrollHeight === lastScrollHeight && isAtBottom && scrollAttempts > 6) {
       console.log(`BookmarkBuddy: Reached bottom - incrementing no-new count to ${consecutiveNoNewTweets}`);
     }
     lastScrollHeight = currentScrollHeight;
