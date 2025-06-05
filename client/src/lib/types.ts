@@ -13,13 +13,13 @@ export type { Category } from '@shared/schema';
 
 export interface Bookmark {
   id: string;
-  content: string | null;
+  content: string;
   url: string;
-  userId: string | null;
-  categoryId: number | null;
+  userId: string;
+  categoryId: number;
   tweetId: string;
-  authorName: string | null;
-  authorUsername: string | null;
+  authorName: string;
+  authorUsername: string;
   authorProfileImage: string | null;
   createdAt: Date;
   bookmarkedAt: Date;
