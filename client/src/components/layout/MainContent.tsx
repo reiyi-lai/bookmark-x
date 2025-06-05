@@ -1,5 +1,5 @@
 import React from "react";
-import type { Bookmark, Category } from "../../lib/types";
+import type { ClientBookmark as Bookmark, Category } from "@shared/schema";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import BookmarksGrid from "../bookmarks/BookmarksGrid";
