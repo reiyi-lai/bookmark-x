@@ -1,6 +1,10 @@
+import type { ImportedBookmark } from '../../shared/schema';
+
 console.log('BookmarkBuddy background script loaded');
 
 const SERVER_URL = 'http://localhost:3000';
+
+let twitterUser: { id: string; username: string } | null = null;
 
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('BookmarkBuddy installed:', details.reason);
@@ -27,6 +31,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'SET_TWITTER_USER') {
+    twitterUser = message.data;
+    sendResponse({ success: true });
+    return;
+  }
+
   console.warn('Unknown message type:', message.type);
   sendResponse({ error: 'Unknown message type' });
 });
@@ -36,15 +46,15 @@ async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (re
     console.log(`BookmarkBuddy: Processing ${rawTweetData.length} raw tweets...`);
     
     // Convert raw tweet data to the format expected by server
-    const importedBookmarks = rawTweetData
+    const bookmarks = rawTweetData
       .map(processRawTweetData)
       .filter(bookmark => bookmark !== null);
     
-    if (importedBookmarks.length === 0) {
+    if (bookmarks.length === 0) {
       throw new Error('No valid tweets to import');
     }
     
-    console.log(`BookmarkBuddy: Sending ${importedBookmarks.length} bookmarks to server for ML categorization and storage...`);
+    console.log(`BookmarkBuddy: Sending ${bookmarks.length} bookmarks to server...`);
     
     // Send to server for ML categorization and storage
     const response = await fetch(`${SERVER_URL}/api/bookmarks/import`, {
@@ -53,12 +63,14 @@ async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (re
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        bookmarks: importedBookmarks
+        bookmarks: bookmarks,
+        twitterUser: twitterUser
       })
     });
     
     if (!response.ok) {
-      throw new Error(`Server request failed: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`Server request failed: ${response.status} - ${errorText}`);
     }
     
     const result = await response.json();
@@ -87,23 +99,24 @@ async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (re
 }
 
 // Convert raw tweet data to ImportedBookmark format expected by server
-function processRawTweetData(rawTweet: any): any | null {
+function processRawTweetData(rawTweet: any): ImportedBookmark | null {
   try {
-    if (!rawTweet.tweetId || !rawTweet.tweetText) {
+    if (!rawTweet.tweetId || !rawTweet.tweetText || !rawTweet.handle || !rawTweet.authorName) {
+      console.warn('BookmarkBuddy: Missing required fields:', rawTweet);
       return null;
     }
     
     return {
       id: rawTweet.tweetId,
       text: rawTweet.tweetText,
-      author_id: rawTweet.handle || 'unknown',
+      author_id: rawTweet.handle,
       created_at: rawTweet.time || new Date().toISOString(),
       media_attachments: rawTweet.media === 'has_media' ? [{ type: 'detected' }] : null,
       url: rawTweet.tweetUrl,
       author: {
-        id: rawTweet.handle || 'unknown',
-        name: rawTweet.authorName || 'Unknown Author',
-        username: rawTweet.handle || 'unknown',
+        id: rawTweet.handle,
+        name: rawTweet.authorName,
+        username: rawTweet.handle,
         profile_image_url: rawTweet.profilePicture || null
       }
     };
