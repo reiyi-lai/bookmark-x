@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "../lib/queryClient";
-import type { Category } from "../lib/types";
+import type { Category } from "@shared/schema";
 import { useToast } from "./use-toast";
 
 export function useCategories() {
