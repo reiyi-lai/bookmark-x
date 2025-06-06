@@ -8,12 +8,16 @@
     "storage",
     "activeTab",
     "scripting",
-    "tabs"
+    "tabs",
+    "cookies"
   ],
   
   "host_permissions": [
     "https://x.com/*",
-    "https://twitter.com/*"
+    "https://twitter.com/*",
+    "https://*.twitter.com/*",
+    "https://*.x.com/*",
+    "http://localhost:3000/*"
   ],
   
   "background": {
