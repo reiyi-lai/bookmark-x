@@ -14,10 +14,10 @@ import { useToast } from "../../hooks/use-toast";
 interface EmailSignupModalProps {
   isOpen: boolean;
   onSubmit: (email: string) => Promise<void>;
-  onClose: () => void;
+  // onClose: () => void;
 }
 
-export function EmailSignupModal({ isOpen, onSubmit, onClose }: EmailSignupModalProps) {
+export function EmailSignupModal({ isOpen, onSubmit }: EmailSignupModalProps) {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -54,8 +54,8 @@ export function EmailSignupModal({ isOpen, onSubmit, onClose }: EmailSignupModal
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={isOpen}>
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Enter your email to save your bookmarks!</DialogTitle>
           {/* <DialogDescription>
