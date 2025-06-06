@@ -6,19 +6,37 @@ import { useToast } from '../../hooks/use-toast';
 
 export function EmailSignupHandler() {
   const [, setLocation] = useLocation();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showEmailSignup, setShowEmailSignup] = useState(false);
   const { toast } = useToast();
-  const { signUpWithEmail, getCurrentUser, twitterAuth, appAuth } = useAuth();
+  const { signUpWithEmail, getCurrentUser, appAuth, setState } = useAuth();
 
   useEffect(() => {
-    if (!appAuth.isAuthenticated) {
-      setIsModalOpen(true);
-    }
-  }, [appAuth.isAuthenticated]);
+    const checkExistingUser = async () => {
+      if (!appAuth.isAuthenticated) {
+        // Check if user already exists in our database
+        const user = await getCurrentUser();
+        if (user?.email) {
+          // Existing user - automatically sign them in
+          setState((prev) => ({
+            ...prev,
+            appAuth: {
+              isAuthenticated: true,
+              email: user.email,
+              userId: user.id
+            }
+          }));
+          return;
+        }
+        // New user - show email signup modal
+        setShowEmailSignup(true);
+      }
+    };
+
+    checkExistingUser();
+  }, [appAuth.isAuthenticated, getCurrentUser, setState]);
 
   const handleEmailSubmit = async (email: string) => {
     try {
-      // Get current user which will have Twitter info
       const user = await getCurrentUser();
       if (!user?.twitter_id || !user?.twitter_username) {
         throw new Error('Missing Twitter user information');
@@ -29,10 +47,8 @@ export function EmailSignupHandler() {
         username: user.twitter_username
       });
 
-      // Close modal and redirect to home without query params
-      setIsModalOpen(false);
+      setShowEmailSignup(false);
       setLocation('/');
-
     } catch (error) {
       console.error('Error in email signup:', error);
       toast({
@@ -40,15 +56,13 @@ export function EmailSignupHandler() {
         description: error instanceof Error ? error.message : 'Failed to register email',
         variant: 'destructive'
       });
-      throw error;
     }
   };
 
   return (
     <EmailSignupModal
-      isOpen={isModalOpen}
+      isOpen={showEmailSignup}
       onSubmit={handleEmailSubmit}
-      onClose={() => setIsModalOpen(false)}
     />
   );
 } 
