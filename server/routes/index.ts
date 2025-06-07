@@ -145,7 +145,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Email is required" });
       }
 
-      // Check if user exists
+      // SECURITY: Verify the requesting user owns this userId
+      const requestingUserId = await getUserFromRequest(req);
+      if (!requestingUserId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      
+      if (requestingUserId !== userId) {
+        return res.status(403).json({ error: "Forbidden: Cannot modify another user's data" });
+      }
+
+      // Check if user exists and user owns this record
       const { data: existingUser, error: userError } = await supabase
         .from('users')
         .select('id, email')
@@ -309,11 +319,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "User not authenticated" });
       }
 
+      // Now delete the bookmark
       const { error } = await supabase
         .from('bookmarks')
         .delete()
         .eq('id', bookmarkId)
-        .eq('user_id', userId); // FIXED: Use actual user_id instead of hardcoded value
+        .eq('user_id', userId);
 
       if (error) {
         throw error;
@@ -336,7 +347,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid bookmark ID or category ID" });
       }
 
-      // Get user ID from request
       const userId = await getUserFromRequest(req);
       if (!userId) {
         return res.status(401).json({ error: "User not authenticated" });
@@ -346,7 +356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from('bookmarks')
         .update({ category_id: categoryId })
         .eq('id', bookmarkId)
-        .eq('user_id', userId); // FIXED: Use actual user_id instead of hardcoded value
+        .eq('user_id', userId);
 
       if (error) {
         throw error;
@@ -373,17 +383,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Recategorize all bookmarks
   app.post("/api/bookmarks/recategorize", async (req: Request, res: Response) => {
     try {
-      // Get user ID from request
       const userId = await getUserFromRequest(req);
       if (!userId) {
         return res.status(401).json({ error: "User not authenticated" });
       }
-
-      // Get all bookmarks for this user only
+      
       const { data: bookmarks, error: bookmarksError } = await supabase
         .from('bookmarks')
         .select('*')
-        .eq('user_id', userId); // FIXED: Only get bookmarks for this user
+        .eq('user_id', userId);
 
       if (bookmarksError || !bookmarks) {
         throw new Error('Failed to fetch bookmarks');
@@ -405,7 +413,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .from('bookmarks')
               .update({ category_id: newCategoryId })
               .eq('id', bookmark.id)
-              .eq('user_id', userId); // FIXED: Ensure we only update this user's bookmarks
+              .eq('user_id', userId);
 
             if (!error) {
               updated++;
