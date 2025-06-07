@@ -24,8 +24,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid bookmark data" });
       }
 
-      if (!twitterUser?.id || !twitterUser?.username) {
-        return res.status(400).json({ error: "Twitter user info required" });
+      // Only require Twitter ID for auth
+      if (!twitterUser?.id) {
+        return res.status(400).json({ error: "Twitter ID required" });
       }
 
       // First, get or create user
@@ -42,10 +43,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let userId: string;
       
       if (!existingUser) {
-        // Create new user with Twitter info only
+        // Create new user with Twitter info
         const userData = {
           twitter_id: twitterUser.id,
-          twitter_username: twitterUser.username
+          twitter_username: twitterUser.username || null // Username is optional
         };
 
         const { data: newUser, error: createError } = await supabase
@@ -163,6 +164,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User already has an email registered" });
       }
 
+      // Check if email already exists for another user
+      const { data: emailCheck, error: emailError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email)
+        .single();
+
+      if (emailError && emailError.code !== 'PGRST116') { // PGRST116 is "not found"
+        throw emailError;
+      }
+
+      if (emailCheck) {
+        return res.status(409).json({ 
+          error: "EMAIL_ALREADY_EXISTS",
+          title: "Enter another email",
+          message: "Email already exists under another x.com account"
+        });
+      }
+
       // Update user with email
       const { error: updateError } = await supabase
         .from('users')
@@ -183,12 +203,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Middleware to extract user ID from request
+  const getUserFromRequest = async (req: Request): Promise<string | null> => {
+    try {
+      // Get twitter_id from query parameter (from client requests)
+      const twitterId = req.headers['x-twitter-id'] || req.query.twitter_id;
+      
+      if (!twitterId) {
+        return null;
+      }
+      
+      // Get user by twitter_id
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('id')
+        .eq('twitter_id', twitterId)
+        .single();
+        
+      if (error || !user) {
+        return null;
+      }
+      
+      return user.id;
+    } catch (error) {
+      console.error('Error getting user from request:', error);
+      return null;
+    }
+  };
+
   // 2. WEB APP ROUTES
   
   // Get bookmarks with optional filtering
   app.get("/api/bookmarks", async (req: Request, res: Response) => {
     try {
       const { categoryId, search } = req.query;
+      
+      // Get user ID from request
+      const userId = await getUserFromRequest(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
       
       let query = supabase
         .from('bookmarks')
@@ -199,7 +253,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             name,
             color
           )
-        `);
+        `)
+        .eq('user_id', userId); // CRITICAL FIX: Filter by user_id
 
       // Filter by category
       if (categoryId) {
@@ -248,11 +303,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid bookmark ID" });
       }
 
+      // Get user ID from request
+      const userId = await getUserFromRequest(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
       const { error } = await supabase
         .from('bookmarks')
         .delete()
         .eq('id', bookmarkId)
-        .eq('user_id', 'chrome_extension_user');
+        .eq('user_id', userId); // FIXED: Use actual user_id instead of hardcoded value
 
       if (error) {
         throw error;
@@ -275,11 +336,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid bookmark ID or category ID" });
       }
 
+      // Get user ID from request
+      const userId = await getUserFromRequest(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
       const { error } = await supabase
         .from('bookmarks')
         .update({ category_id: categoryId })
         .eq('id', bookmarkId)
-        .eq('user_id', 'chrome_extension_user');
+        .eq('user_id', userId); // FIXED: Use actual user_id instead of hardcoded value
 
       if (error) {
         throw error;
@@ -306,10 +373,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Recategorize all bookmarks
   app.post("/api/bookmarks/recategorize", async (req: Request, res: Response) => {
     try {
-      // Get all bookmarks
+      // Get user ID from request
+      const userId = await getUserFromRequest(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      // Get all bookmarks for this user only
       const { data: bookmarks, error: bookmarksError } = await supabase
         .from('bookmarks')
-        .select('*');
+        .select('*')
+        .eq('user_id', userId); // FIXED: Only get bookmarks for this user
 
       if (bookmarksError || !bookmarks) {
         throw new Error('Failed to fetch bookmarks');
@@ -330,7 +404,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const { error } = await supabase
               .from('bookmarks')
               .update({ category_id: newCategoryId })
-              .eq('id', bookmark.id);
+              .eq('id', bookmark.id)
+              .eq('user_id', userId); // FIXED: Ensure we only update this user's bookmarks
 
             if (!error) {
               updated++;
