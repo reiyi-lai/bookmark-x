@@ -12,6 +12,8 @@ export class TweetCarousel {
   private currentIndex = 0;
   private transitionInProgress = false;
   private intervalId: number | null = null;
+  private readonly ANIMATION_INTERVAL = 1000; // 1 second between transitions
+  private readonly TRANSITION_DURATION = 500; // 500ms for the animation itself
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -26,8 +28,11 @@ export class TweetCarousel {
       // First card should be visible immediately
       card.style.opacity = '1';
       card.style.transform = 'translateX(-50%) scale(1)';
-    } else if (this.cards.length === 2) {
-      // Start the carousel when we have at least 2 cards
+    } else {
+      // Position new cards to the right
+      card.style.transform = 'translateX(50%) scale(0.8)';
+      
+      // Start carousel if not already running
       this.startCarousel();
     }
   }
@@ -39,13 +44,13 @@ export class TweetCarousel {
       position: absolute;
       left: 50%;
       top: 0;
-      transform: translateX(-50%) scale(0.8);
+      transform: translateX(50%) scale(0.8);
       width: 500px;
       background: white;
       border-radius: 16px;
       padding: 50px;
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      transition: all 0.5s ease;
+      transition: all ${this.TRANSITION_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1);
       opacity: 0;
     `;
 
@@ -111,11 +116,16 @@ export class TweetCarousel {
   private startCarousel() {
     if (this.intervalId !== null) return;
     
+    // Show next card immediately when starting carousel
+    if (this.cards.length > 1 && !this.transitionInProgress) {
+      this.showNextCard();
+    }
+    
     this.intervalId = window.setInterval(() => {
       if (!this.transitionInProgress && this.cards.length > 1) {
         this.showNextCard();
       }
-    }, 2000); // Change card every 2 seconds
+    }, this.ANIMATION_INTERVAL);
   }
 
   private showNextCard() {
@@ -126,11 +136,11 @@ export class TweetCarousel {
     this.currentIndex = (this.currentIndex + 1) % this.cards.length;
     const nextCard = this.cards[this.currentIndex];
 
-    // Slide out current card
+    // Slide out current card to the left
     currentCard.element.style.transform = 'translateX(-150%) scale(0.8)';
     currentCard.element.style.opacity = '0';
 
-    // Slide in next card
+    // Slide in next card from the right
     nextCard.element.style.transform = 'translateX(-50%) scale(1)';
     nextCard.element.style.opacity = '1';
 
@@ -138,7 +148,7 @@ export class TweetCarousel {
     setTimeout(() => {
       currentCard.element.style.transform = 'translateX(50%) scale(0.8)';
       this.transitionInProgress = false;
-    }, 500);
+    }, this.TRANSITION_DURATION);
   }
 
   stop() {
@@ -176,11 +186,12 @@ export function createLoadingModal() {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
     width: 100%;
     max-width: 600px;
-    /* Add padding to ensure space for absolutely positioned cards */
+    height: 400px; /* Fixed height container */
     padding: 20px;
+    position: relative;
   `;
 
   const carouselContainer = document.createElement('div');
@@ -188,13 +199,12 @@ export function createLoadingModal() {
   carouselContainer.style.cssText = `
     position: relative;
     width: 100%;
-    min-height: 220px;
-    height: auto;
+    flex: 1;
     perspective: 1000px;
     /* Contain absolutely positioned children */
     overflow: visible;
-    /* Reserve space for cards */
-    margin-bottom: 10px;
+    /* Add padding to ensure space for progress text */
+    padding-bottom: 30px;
   `;
 
   const progressText = document.createElement('div');
@@ -204,11 +214,10 @@ export function createLoadingModal() {
     font-size: 18px;
     font-weight: 500;
     text-align: center;
-    position: relative;
-    z-index: 2;
-    /* Ensure text has its own space */
+    width: 100%;
     padding: 10px;
-    margin-top: 20px;
+    /* Fixed height for progress text */
+    height: 40px;
   `;
   progressText.textContent = 'Collecting...';
 
