@@ -33,12 +33,12 @@ interface User {
 }
 
 interface AuthContextType extends AuthState {
-  checkTwitterAuth: () => Promise<boolean>;
   signUpWithEmail: (email: string, twitterUser: TwitterUser) => Promise<User>;
   getCurrentUser: () => Promise<User | null>;
   updateUserEmail: (userId: string, email: string) => Promise<void>;
   isFullyAuthenticated: () => boolean;
   logout: () => Promise<void>;
+  setState: React.Dispatch<React.SetStateAction<AuthState>>;
 }
 
 const initialState: AuthState = {
@@ -70,12 +70,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const getCurrentUser = useCallback(async (): Promise<User | null> => {
     try {
+      const twitterId = sessionStorage.getItem('twitter_user_id');
+      
+      if (!twitterId) {
+        return null;
+      }
+      
       const { data: user, error } = await supabase
         .from('users')
         .select('*')
+        .eq('twitter_id', twitterId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === 'PGRST116') { // Not found
+          return null;
+        }
+        throw error;
+      }
       return user;
     } catch (error) {
       console.error('Error getting current user from Supabase:', error);
@@ -83,14 +95,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
-  const checkTwitterAuth = useCallback(async (): Promise<boolean> => {
-    return !!localStorage.getItem('twitter_user_id');
-  }, []);
-
   const signUpWithEmail = useCallback(async (email: string, twitterUser: TwitterUser): Promise<User> => {
     try {
       const currentUser = await getCurrentUser();
-      if (!currentUser?.id) {
+      if (!currentUser) {
         throw new Error('User not found');
       }
 
@@ -116,9 +124,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }));
 
       return updatedUser;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in signUpWithEmail:', error);
-      throw error;
+      
+      // With our updated apiRequest, the error message is directly in error.message
+      const message = error?.message || 'Failed to register email';
+      throw new Error(message);
     }
   }, [getCurrentUser]);
 
@@ -150,8 +161,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [state.twitterAuth.isAuthenticated, state.appAuth.isAuthenticated]);
 
   const logout = useCallback(async (): Promise<void> => {
-    localStorage.removeItem('twitter_user_id');
-    localStorage.removeItem('twitter_username');
+    sessionStorage.removeItem('twitter_user_id');
+    sessionStorage.removeItem('twitter_username');
     setState({
       twitterAuth: {
         isAuthenticated: false,
@@ -170,15 +181,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const twitterAuth = await checkTwitterAuth();
+        // Check if user came from extension
+        const urlParams = new URLSearchParams(window.location.search);
+        const isFromExtension = urlParams.get('source') === 'extension';
+        const twitterId = urlParams.get('twitter_id');
+        
+        if (isFromExtension && twitterId) {
+          // Clean up URL and store Twitter ID in sessionStorage for getCurrentUser to use
+          window.history.replaceState({}, '', window.location.pathname);
+          sessionStorage.setItem('twitter_user_id', twitterId);
+        }
+        
+        // Simply get user - this handles both sessionStorage check and database lookup
         const user = await getCurrentUser();
         
         setState(prev => ({
           ...prev,
           twitterAuth: {
-            isAuthenticated: twitterAuth,
-            userId: localStorage.getItem('twitter_user_id'),
-            username: localStorage.getItem('twitter_username')
+            isAuthenticated: !!user,
+            userId: user?.twitter_id || null,
+            username: user?.twitter_username || null
           },
           appAuth: {
             isAuthenticated: !!user?.email,
@@ -207,16 +229,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     initializeAuth();
-  }, [checkTwitterAuth, getCurrentUser]);
+  }, [getCurrentUser]);
 
   const value: AuthContextType = {
     ...state,
-    checkTwitterAuth,
     signUpWithEmail,
     getCurrentUser,
     updateUserEmail,
     isFullyAuthenticated,
-    logout
+    logout,
+    setState
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
