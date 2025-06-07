@@ -79,12 +79,23 @@ export function EmailSignupHandler() {
       // Navigate to home page after successful signup
       setLocation('/');
     } catch (error) {
-      console.error('Error in email signup:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to register email',
-        variant: 'destructive'
-      });
+      // console.error('Error in email signup:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Failed to register email';
+      if (errorMessage.includes('Email already exists under another x.com account')) {
+        toast({
+          title: 'Enter another email',
+          description: 'Email already exists under another x.com account.',
+          variant: 'destructive'
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive'
+        });
+      }
+      
       throw error; // Re-throw so modal can handle the error state
     }
   };
