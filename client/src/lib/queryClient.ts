@@ -1,12 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-async function throwIfResNotOk(res: Response) {
-  if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
-  }
-}
-
 export async function apiRequest<T = any>(
   options: {
     endpoint: string;
@@ -16,9 +9,23 @@ export async function apiRequest<T = any>(
   }
 ): Promise<T> {
   const { endpoint, method, data } = options;
+  
+  // Get twitter_id from sessionStorage for authentication
+  const twitterId = sessionStorage.getItem('twitter_user_id');
+  const headers: Record<string, string> = {};
+  
+  if (data) {
+    headers["Content-Type"] = "application/json";
+  }
+  
+  // Add authentication header if available
+  if (twitterId) {
+    headers["x-twitter-id"] = twitterId;
+  }
+  
   const res = await fetch(endpoint, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -27,7 +34,36 @@ export async function apiRequest<T = any>(
     return null as T;
   }
 
-  await throwIfResNotOk(res);
+  // Handle error responses
+  if (!res.ok) {
+    let errorMessage = res.statusText;
+    
+    try {
+      // Try to parse JSON error response
+      const errorData = await res.json();
+      if (errorData.message) {
+        errorMessage = errorData.message;
+      } else if (errorData.error) {
+        errorMessage = errorData.error;
+      }
+    } catch (e) {
+      // If not JSON, fall back to text
+      try {
+        const text = await res.text();
+        if (text) {
+          errorMessage = text;
+        }
+      } catch (textError) {
+        // Keep the statusText if everything else fails
+      }
+    }
+    
+    const error = new Error(errorMessage);
+    // @ts-ignore - Add status code to error for debugging
+    error.status = res.status;
+    throw error;
+  }
+  
   return res.json();
 }
 
@@ -37,7 +73,17 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    // Get twitter_id from sessionStorage for authentication
+    const twitterId = sessionStorage.getItem('twitter_user_id');
+    const headers: Record<string, string> = {};
+    
+    // Add authentication header if available
+    if (twitterId) {
+      headers["x-twitter-id"] = twitterId;
+    }
+    
     const res = await fetch(queryKey[0] as string, {
+      headers,
       credentials: "include",
     });
 
@@ -45,7 +91,36 @@ export const getQueryFn: <T>(options: {
       return null;
     }
 
-    await throwIfResNotOk(res);
+    // Handle error responses
+    if (!res.ok) {
+      let errorMessage = res.statusText;
+      
+      try {
+        // Try to parse JSON error response
+        const errorData = await res.json();
+        if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch (e) {
+        // If not JSON, fall back to text
+        try {
+          const text = await res.text();
+          if (text) {
+            errorMessage = text;
+          }
+        } catch (textError) {
+          // Keep the statusText if everything else fails
+        }
+      }
+      
+      const error = new Error(errorMessage);
+      // @ts-ignore - Add status code to error for debugging
+      error.status = res.status;
+      throw error;
+    }
+    
     return await res.json();
   };
 
