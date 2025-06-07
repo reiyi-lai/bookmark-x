@@ -1,8 +1,9 @@
 import { CollectedTweet as Tweet } from '../../shared/schema';
 import { TweetCarousel, createLoadingModal } from './components/modal';
-import { showButtonLoading, showButtonSuccess, showButtonError, showNotification } from './components/button-states';
+import { showNotification } from './components/button-states';
+import { addSyncButton } from './components/sync-button';
 
-// Get Twitter user info
+// Extract Twitter user info from the page DOM
 export async function getTwitterUserInfo(): Promise<{ id: string; username: string } | null> {
   try {
     // Look for initial state data in script tags
@@ -17,12 +18,6 @@ export async function getTwitterUserInfo(): Promise<{ id: string; username: stri
           username: match[1],
           id: match[2]
         };
-        
-        // Store in chrome.storage.local
-        await chrome.storage.local.set({
-          twitter_user_id: userInfo.id,
-          twitter_username: userInfo.username
-        });
         
         return userInfo;
       }
@@ -178,31 +173,28 @@ async function collectWithNewTurboMethod(
   return Array.from(tweetMap.values());
 }
 
-// Handle bulk bookmark operation
+// Handle bulk bookmark operation - works for both fresh installs and manual sync
 export async function handleBulkBookmark() {
   try {
+    // Check if user is logged in first
+    const userInfo = await getTwitterUserInfo();
+    if (!userInfo) {
+      return;
+    }
+
     // Create and add the loading modal
     const { modal, carouselContainer, progressText } = createLoadingModal();
     document.body.appendChild(modal);
     
     const carousel = new TweetCarousel(carouselContainer);
 
-    // Get Twitter user info first
-    const twitterUser = await getTwitterUserInfo();
-    if (!twitterUser) {
-      showNotification('Please make sure you are logged into Twitter/X', 'error');
-      modal.remove();
-      return;
-    }
-
-    // Send Twitter user info to background script
+    // Send user info to background script for server processing
     await chrome.runtime.sendMessage({
       type: 'SET_TWITTER_USER',
-      data: twitterUser
+      data: userInfo
     });
     
     console.log('BookmarkBuddy: Starting tweet collection...');
-    // progressText.textContent = 'Finding your bookmarks...';
     
     // Collect tweets with progress updates
     const startTime = Date.now();
@@ -210,8 +202,6 @@ export async function handleBulkBookmark() {
       carousel.addTweet(tweet);
       progressText.textContent = `Collecting... ${count} bookmarks`;
     });
-    
-    console.log(`BookmarkBuddy: Collected ${allTweetData.length} tweets as raw JSON`);
     
     if (allTweetData.length === 0) {
       showNotification('No tweets found to bookmark', 'error');
