@@ -4,20 +4,18 @@ console.log('BookmarkBuddy background script loaded');
 
 const SERVER_URL = 'http://localhost:3000';
 
+// Twitter user info received from content script
 let twitterUser: { id: string; username: string } | null = null;
 
-chrome.runtime.onInstalled.addListener((details) => {
-  console.log('BookmarkBuddy installed:', details.reason);
-  
+// Listen for extension installation
+chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === 'install') {
-    // Navigate to Twitter/X bookmarks page after installation
-    chrome.tabs.create({ 
-      url: 'https://x.com/i/bookmarks',
-      active: true
-    }).then(() => {
-      console.log('BookmarkBuddy: Opened Twitter/X bookmarks page after installation');
-    }).catch((error) => {
-      console.error('BookmarkBuddy: Failed to open bookmarks page:', error);
+    console.log('BookmarkBuddy: Extension installed, opening bookmarks page...');
+    
+    await chrome.storage.local.set({ isNewInstall: true });
+    
+    await chrome.tabs.create({
+      url: 'https://twitter.com/i/bookmarks'
     });
   }
 });
@@ -28,7 +26,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'PROCESS_TWEET_JSON_BULK') {
     handleProcessTweetJSONBulk(message.data, sendResponse);
-    return true;
+    return true; // Keep channel open for async response
   }
 
   if (message.type === 'SET_TWITTER_USER') {
@@ -37,15 +35,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return;
   }
 
-  console.warn('Unknown message type:', message.type);
+  console.warn('BookmarkBuddy: Unknown message type:', message.type);
   sendResponse({ error: 'Unknown message type' });
+  return;
 });
 
 async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (response: any) => void) {
   try {
-    console.log(`BookmarkBuddy: Processing ${rawTweetData.length} raw tweets...`);
+    console.log(`BookmarkBuddy: Processing ${rawTweetData.length} raw tweets for user: ${twitterUser?.username}`);
     
-    // Convert raw tweet data to the format expected by server
+    // Ensure we have Twitter user info
+    if (!twitterUser) {
+      throw new Error('Twitter user info not available');
+    }
+    
+    // Convert and filter tweets
     const bookmarks = rawTweetData
       .map(processRawTweetData)
       .filter(bookmark => bookmark !== null);
@@ -74,26 +78,36 @@ async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (re
     }
     
     const result = await response.json();
-    console.log(`BookmarkBuddy: Server processed bookmarks successfully:`, result.stats);
+    const processedCount = result.stats?.imported || result.stats?.total || bookmarks.length;
     
-    // Redirect to main site after successful processing
-    chrome.tabs.create({ 
-      url: `${SERVER_URL}/?source=extension`,
-      active: true 
-    });
+    console.log(`BookmarkBuddy: Successfully processed ${processedCount} bookmarks`);
+    
+    // Mark installation as complete and redirect
+    await completeInstallation();
     
     sendResponse({
       success: true,
-      processedCount: result.stats.total,
-      savedCount: result.stats.imported,
-      stats: result.stats
+      processedCount: processedCount
     });
     
   } catch (error: unknown) {
-    console.error('BookmarkBuddy: Error in handleProcessTweetJSONBulk:', error);
+    console.error('BookmarkBuddy: Error processing tweets:', error);
     sendResponse({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to connect to the server'
+    });
+  }
+}
+
+async function completeInstallation() {
+  // Clear the installation flag
+  await chrome.storage.local.remove(['isNewInstall']);
+  
+  // Redirect to main site with twitter user ID
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tab.id) {
+    await chrome.tabs.update(tab.id, { 
+      url: `${SERVER_URL}?source=extension&twitter_id=${twitterUser!.id}`
     });
   }
 }
