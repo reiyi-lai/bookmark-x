@@ -22,11 +22,11 @@ export async function getTwitterUserInfo(): Promise<{ id: string; username: stri
       }
     }
 
-    console.warn('BookmarkBuddy: Could not find Twitter user info in initial state');
+    console.warn('Bookmark-X: Could not find Twitter user info in initial state');
     return null;
 
   } catch (error) {
-    console.error('BookmarkBuddy: Error getting Twitter user info:', error);
+    console.error('Bookmark-X: Error getting Twitter user info:', error);
     return null;
   }
 }
@@ -74,7 +74,7 @@ async function collectWithNewTurboMethod(
   }
   
   const waitTime = 175;
-  console.log('BookmarkBuddy: Starting tweet collection...');
+  console.log('Bookmark-X: Starting tweet collection...');
   
   while (consecutiveNoNewTweets < 8) {
     const currentTweetElements = document.querySelectorAll('[data-testid="tweet"]');
@@ -128,18 +128,18 @@ async function collectWithNewTurboMethod(
 
           if (tweetMap.size >= 300) {
             const totalTime = (Date.now() - startTime) / 1000;
-            console.log(`BookmarkBuddy: Reached temporary 300 tweet test limit in ${totalTime} seconds`);
+            console.log(`Bookmark-X: Reached temporary 300 tweet test limit in ${totalTime} seconds`);
             return Array.from(tweetMap.values());
           }
 
           if (!reachedMilestone && tweetMap.size >= timingMilestone) {
             const timeToMilestone = Date.now() - startTime;
-            console.log(`BookmarkBuddy: Reached ${timingMilestone} tweets in ${timeToMilestone/1000} seconds`);
+            // console.log(`Bookmark-X: Reached ${timingMilestone} tweets in ${timeToMilestone/1000} seconds`);
             reachedMilestone = true;
           }
         }
       } catch (error) {
-        console.error('BookmarkBuddy: Error processing tweet:', error);
+        console.error('Bookmark-X: Error processing tweet:', error);
       }
     }
     
@@ -193,7 +193,7 @@ export async function handleBulkBookmark() {
       data: userInfo
     });
     
-    console.log('BookmarkBuddy: Starting tweet collection...');
+    console.log('Bookmark-X: Starting tweet collection...');
     
     // Collect tweets with progress updates
     const startTime = Date.now();

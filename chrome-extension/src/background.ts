@@ -1,6 +1,6 @@
 import type { ImportedBookmark } from '../../shared/schema';
 
-console.log('BookmarkBuddy background script loaded');
+console.log('Bookmark-X background script loaded');
 
 const SERVER_URL = 'http://localhost:3000';
 
@@ -10,7 +10,7 @@ let twitterUser: { id: string; username: string } | null = null;
 // Listen for extension installation
 chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === 'install') {
-    console.log('BookmarkBuddy: Extension installed, opening bookmarks page...');
+    // console.log('Bookmark-X: Extension installed, opening bookmarks page...');
     
     await chrome.storage.local.set({ isNewInstall: true });
     
@@ -22,7 +22,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 
 // Handle messages from content script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('BookmarkBuddy: Received message:', message.type);
+  // console.log('Bookmark-X: Received message:', message.type);
 
   if (message.type === 'PROCESS_TWEET_JSON_BULK') {
     handleProcessTweetJSONBulk(message.data, sendResponse);
@@ -35,14 +35,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return;
   }
 
-  console.warn('BookmarkBuddy: Unknown message type:', message.type);
+  console.warn('Bookmark-X: Unknown message type:', message.type);
   sendResponse({ error: 'Unknown message type' });
   return;
 });
 
 async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (response: any) => void) {
   try {
-    console.log(`BookmarkBuddy: Processing ${rawTweetData.length} raw tweets for user: ${twitterUser?.username}`);
+    // console.log(`Bookmark-X: Processing ${rawTweetData.length} raw tweets for user: ${twitterUser?.username}`);
     
     // Ensure we have Twitter user info
     if (!twitterUser) {
@@ -58,7 +58,7 @@ async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (re
       throw new Error('No valid tweets to import');
     }
     
-    console.log(`BookmarkBuddy: Sending ${bookmarks.length} bookmarks to server...`);
+    console.log(`Bookmark-X: Sending ${bookmarks.length} bookmarks to server...`);
     
     // Send to server for ML categorization and storage
     const response = await fetch(`${SERVER_URL}/api/bookmarks/import`, {
@@ -80,7 +80,7 @@ async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (re
     const result = await response.json();
     const processedCount = result.stats?.imported || result.stats?.total || bookmarks.length;
     
-    console.log(`BookmarkBuddy: Successfully processed ${processedCount} bookmarks`);
+    console.log(`Bookmark-X: Successfully processed ${processedCount} bookmarks`);
     
     // Mark installation as complete and redirect
     await completeInstallation();
@@ -91,7 +91,7 @@ async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (re
     });
     
   } catch (error: unknown) {
-    console.error('BookmarkBuddy: Error processing tweets:', error);
+    console.error('Bookmark-X: Error processing tweets:', error);
     sendResponse({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to connect to the server'
@@ -116,7 +116,7 @@ async function completeInstallation() {
 function processRawTweetData(rawTweet: any): ImportedBookmark | null {
   try {
     if (!rawTweet.tweetId || !rawTweet.tweetText || !rawTweet.handle || !rawTweet.authorName) {
-      console.warn('BookmarkBuddy: Missing required fields:', rawTweet);
+      console.warn('Bookmark-X: Missing required fields:', rawTweet);
       return null;
     }
     
@@ -135,7 +135,7 @@ function processRawTweetData(rawTweet: any): ImportedBookmark | null {
       }
     };
   } catch (error: unknown) {
-    console.error('BookmarkBuddy: Error processing raw tweet data:', error);
+    console.error('Bookmark-X: Error processing raw tweet data:', error);
     return null;
   }
 }
