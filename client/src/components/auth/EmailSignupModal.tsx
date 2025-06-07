@@ -14,10 +14,10 @@ import { useToast } from "../../hooks/use-toast";
 interface EmailSignupModalProps {
   isOpen: boolean;
   onSubmit: (email: string) => Promise<void>;
-  // onClose: () => void;
+  onClose: () => void;
 }
 
-export function EmailSignupModal({ isOpen, onSubmit }: EmailSignupModalProps) {
+export function EmailSignupModal({ isOpen, onSubmit, onClose }: EmailSignupModalProps) {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -42,20 +42,17 @@ export function EmailSignupModal({ isOpen, onSubmit }: EmailSignupModalProps) {
         title: "Success!",
         description: "Your email has been registered successfully.",
       });
+      onClose();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to register email",
-        variant: "destructive",
-      });
+      // Error handling by EmailSignupHandler - just keep modal open
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Dialog open={isOpen}>
-      <DialogContent>
+    <Dialog open={isOpen} onOpenChange={() => {}} modal={true}>
+      <DialogContent className="[&>button]:hidden">
         <DialogHeader>
           <DialogTitle>Enter your email to save your bookmarks!</DialogTitle>
           {/* <DialogDescription>
