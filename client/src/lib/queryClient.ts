@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { API_URL } from "./config";
 
 export async function apiRequest<T = any>(
   options: {
@@ -9,6 +10,9 @@ export async function apiRequest<T = any>(
   }
 ): Promise<T> {
   const { endpoint, method, data } = options;
+  
+  // Construct full URL - if endpoint already has protocol, use as is, otherwise prepend API_URL
+  const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
   
   // Get twitter_id from sessionStorage for authentication
   const twitterId = sessionStorage.getItem('twitter_user_id');
@@ -23,7 +27,7 @@ export async function apiRequest<T = any>(
     headers["x-twitter-id"] = twitterId;
   }
   
-  const res = await fetch(endpoint, {
+  const res = await fetch(url, {
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
@@ -73,6 +77,10 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    // Construct full URL - if queryKey already has protocol, use as is, otherwise prepend API_URL
+    const endpoint = queryKey[0] as string;
+    const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
+    
     // Get twitter_id from sessionStorage for authentication
     const twitterId = sessionStorage.getItem('twitter_user_id');
     const headers: Record<string, string> = {};
@@ -82,7 +90,7 @@ export const getQueryFn: <T>(options: {
       headers["x-twitter-id"] = twitterId;
     }
     
-    const res = await fetch(queryKey[0] as string, {
+    const res = await fetch(url, {
       headers,
       credentials: "include",
     });
