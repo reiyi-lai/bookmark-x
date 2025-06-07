@@ -1,8 +1,8 @@
 // API Configuration
 const getApiUrl = () => {
-  // In production (when deployed), use the production API
+  // In production (when deployed), use the Railway API
   if (import.meta.env.PROD) {
-    return 'https://bookmark-x.info';
+    return 'https://bookmark-x-production.up.railway.app'; // Replace with your actual Railway URL
   }
   
   // In development, use localhost
