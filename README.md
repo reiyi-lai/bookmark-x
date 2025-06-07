@@ -2,6 +2,17 @@
 
 Bookmark-X helps you automatically organize your Twitter bookmarks into meaningful categories using ML-powered classification.
 
+## 🚀 Project Structure
+
+```
+BookmarkBuddy/
+├── client/                    # React frontend (deployed to Vercel)
+├── server/                    # Express.js backend
+├── chrome-extension/          # Chrome extension source
+├── shared/                    # Shared types and schemas
+└── supabase/                  # Database migrations and config
+```
+
 ## 🚀 Soft Launch Plan (Target: June 6)
 
 ### UI Changes (2 days)
@@ -59,13 +70,19 @@ Bookmark-X helps you automatically organize your Twitter bookmarks into meaningf
 - npm
 - Chrome browser (for extension development)
 
-### Server and Web App Setup
-1. Install dependencies:
+### Development Setup
+
+1. **Install dependencies:**
 ```bash
+# Install root dependencies (server, shared)
 npm install
+
+# Install client dependencies
+cd client && npm install
 ```
 
-2. Set up `.env` in root directory.
+2. **Set up environment variables:**
+Create `.env` in root directory:
 ```
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
@@ -74,11 +91,40 @@ SUPABASE_PROJECT_REF=
 HUGGINGFACE_API_KEY=
 ```
 
-3. Start development server:
+3. **Start development servers:**
 ```bash
+# Terminal 1: Start backend
 npm run dev
+
+# Terminal 2: Start frontend
+cd client && npm run dev
 ```
-Web app can be accesed at http://localhost:3000.
+
+4. **Access the application:**
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:3000/api
+
+### Production Deployment
+
+#### Frontend (Vercel)
+See detailed instructions in [`client/README.md`](./client/README.md)
+
+1. Deploy the `/client` directory to Vercel
+2. Framework preset: **Vite**
+3. Root directory: `/client`
+4. Auto-detected build settings work perfectly
+
+#### Backend
+Deploy the Express.js server to your preferred hosting provider:
+- Railway
+- Heroku  
+- DigitalOcean
+- AWS/GCP/Azure
+
+#### Environment Configuration
+The client automatically detects the environment:
+- **Development**: API calls to `http://localhost:3000`
+- **Production**: API calls to `https://bookmark-x.info`
 
 ### Supabase Setup
 
@@ -125,3 +171,19 @@ npm run build
    - Enable "Developer mode"
    - Click "Load unpacked"
    - Select `chrome-extension/dist` in project folder
+
+## 📦 Build Commands
+
+```bash
+# Development
+npm run dev                    # Start backend server
+cd client && npm run dev       # Start frontend dev server
+
+# Building
+npm run build                  # Build entire monorepo
+cd client && npm run build     # Build frontend only (for Vercel)
+npm run build:extension        # Build Chrome extension
+
+# Database
+npm run supabase:*            # Various Supabase commands
+```
