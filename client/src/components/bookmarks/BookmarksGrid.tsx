@@ -1,4 +1,4 @@
-import type { Bookmark } from "../../lib/types";
+import type { ClientBookmark as Bookmark } from "@shared/schema";
 import BookmarkCard from "./BookmarkCard";
 import { Skeleton } from "../ui/skeleton";
 
