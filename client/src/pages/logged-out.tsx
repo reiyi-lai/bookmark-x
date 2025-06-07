@@ -1,4 +1,4 @@
-import React from 'react';
+// import React from 'react';
 import { Button } from '../components/ui/button';
 import { Bookmark, LogIn } from 'lucide-react';
 
@@ -37,15 +37,17 @@ export default function LoggedOut() {
             Go to X.com Bookmarks to Login Again
           </Button>
 
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          {/* <p className="text-sm text-gray-500 dark:text-gray-400">
             Use our Chrome extension and sync your bookmarks anytime!
-          </p>
+          </p> */}
         </div>
 
         {/* Simple footer */}
-        <div className="pt-8 text-xs text-gray-400 dark:text-gray-500">
+        {/* <h2 className="text-l font-bold mb-4"> */}
+        <div className="pt-8 text-s text-gray-400 dark:text-gray-500">
           Bookmark-X - AI-powered bookmark organization
         </div>
+        {/* </h2> */}
       </div>
     </div>
   );
