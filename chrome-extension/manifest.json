@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "BookmarkBuddy",
+  "name": "Bookmark-X",
   "version": "1.0.0",
   "description": "AI-powered bookmark manager for Twitter/X posts",
   
@@ -30,7 +30,7 @@
   
   "action": {
     "default_popup": "src/popup/index.html",
-    "default_title": "BookmarkBuddy",
+    "default_title": "Bookmark-X",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -43,6 +43,8 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
+
+  "author": "Rachel Lai",
   
   "web_accessible_resources": [
     {

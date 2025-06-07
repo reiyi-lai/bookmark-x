@@ -1,7 +1,7 @@
 {
-  "name": "bookmark-buddy-extension",
+  "name": "bookmark-x-extension",
   "version": "1.0.0",
-  "description": "Chrome extension for BookmarkBuddy",
+  "description": "Chrome extension for Bookmark-X",
   "type": "module",
   "scripts": {
     "dev": "vite",

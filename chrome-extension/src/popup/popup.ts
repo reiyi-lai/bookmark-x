@@ -1,4 +1,4 @@
-// BookmarkBuddy Chrome Extension Popup
+// Bookmark-X Chrome Extension Popup
 document.addEventListener('DOMContentLoaded', initializePopup);
 
 async function initializePopup() {
@@ -16,7 +16,7 @@ async function checkAuthState() {
     const isTwitter = tab.url?.includes('twitter.com') || tab.url?.includes('x.com');
     
     if (!isTwitter) {
-      showAuthSection('Please open Twitter/X to use BookmarkBuddy');
+      showAuthSection('Please open Twitter/X to use Bookmark-X');
       return;
     }
 

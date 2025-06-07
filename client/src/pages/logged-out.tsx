@@ -23,7 +23,7 @@ export default function LoggedOut() {
             You've been logged out
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Thanks for using BookmarkBuddy! Your bookmarks are safely stored.
+            Thanks for using Bookmark-X! Your bookmarks are safely stored.
           </p>
         </div>
 
@@ -38,13 +38,13 @@ export default function LoggedOut() {
           </Button>
 
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Install the BookmarkBuddy extension and sync your bookmarks anytime!
+            Use our Chrome extension and sync your bookmarks anytime!
           </p>
         </div>
 
         {/* Simple footer */}
         <div className="pt-8 text-xs text-gray-400 dark:text-gray-500">
-          BookmarkBuddy - AI-powered bookmark organization
+          Bookmark-X - AI-powered bookmark organization
         </div>
       </div>
     </div>
