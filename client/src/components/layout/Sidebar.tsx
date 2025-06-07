@@ -39,15 +39,19 @@ export default function Sidebar({
       } w-64 bg-white dark:bg-gray-900 h-screen border-r border-gray-200 dark:border-gray-800 transition-transform duration-300 ease-in-out fixed lg:static z-30`}
     >
       <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center">
-        <h1 className="text-xl font-bold text-twitterBlue flex items-center">
-          <Bookmark className="h-5 w-5 mr-2" />
-          Bookmark Organizer
+        <h1 className="text-2xl font-bold text-twitterBlue flex items-center flex-1 min-w-0">
+          <img 
+            src="/generated-icon.png" 
+            alt="Bookmark-X Logo" 
+            className="h-10 w-10 mr-3 flex-shrink-0" 
+          />
+          <span className="truncate">Bookmark-X</span>
         </h1>
         <Button
           onClick={closeSidebar}
           variant="ghost"
           size="icon"
-          className="ml-auto p-1 rounded-full text-gray-500 hover:bg-gray-100 lg:hidden dark:text-gray-400 dark:hover:bg-gray-800"
+          className="ml-2 p-1 rounded-full text-gray-500 hover:bg-gray-100 lg:hidden dark:text-gray-400 dark:hover:bg-gray-800"
           aria-label="Close Sidebar"
         >
           <X className="h-5 w-5" />
