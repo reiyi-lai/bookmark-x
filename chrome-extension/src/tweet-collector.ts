@@ -1,7 +1,6 @@
 import { CollectedTweet as Tweet } from '../../shared/schema';
 import { TweetCarousel, createLoadingModal } from './components/modal';
-import { showNotification } from './components/button-states';
-import { addSyncButton } from './components/sync-button';
+import { showNotification } from './components/sync-button';
 
 // Extract Twitter user info from the page DOM
 export async function getTwitterUserInfo(): Promise<{ id: string; username: string } | null> {
