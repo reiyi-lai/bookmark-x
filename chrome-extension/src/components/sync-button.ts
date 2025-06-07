@@ -80,6 +80,7 @@ export function addSyncButton() {
 
   const titleElement = findPageTitle();
   if (!titleElement) {
+    requestAnimationFrame(addSyncButton);
     return;
   }
 
