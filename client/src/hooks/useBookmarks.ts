@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "../lib/queryClient";
 import { useState, useCallback, useEffect } from "react";
-import type { Bookmark } from "../lib/types";
+import type { ClientBookmark as Bookmark } from "@shared/schema";
 import { useToast } from "./use-toast";
 
 export function useBookmarks(categoryId?: number, searchQuery?: string) {
@@ -9,9 +9,6 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
   const { toast } = useToast();
   const [selectedBookmark, setSelectedBookmark] = useState<Bookmark | null>(null);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
-
-  // Check if redirected from extension
-  const isFromExtension = new URLSearchParams(window.location.search).get('source') === 'extension';
 
   // Construct the query params
   const queryParams = new URLSearchParams();
@@ -92,13 +89,6 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
       });
     },
   });
-
-  // Auto-sync when redirected from extension
-  useEffect(() => {
-    if (isFromExtension) {
-      syncBookmarks();
-    }
-  }, [isFromExtension, syncBookmarks]);
 
   // Delete a bookmark
   const { mutate: deleteBookmark, isPending: isDeleting } = useMutation({
