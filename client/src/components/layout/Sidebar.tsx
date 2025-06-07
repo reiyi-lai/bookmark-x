@@ -5,7 +5,7 @@ import { Separator } from "../ui/separator";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
 import { useTheme } from "../../contexts/ThemeContext";
-// import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { getMaterialIcon } from "../../utils/categoryIcons";
 import { Bookmark, X, Moon, LogOut } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
@@ -30,7 +30,7 @@ export default function Sidebar({
   isLoading
 }: SidebarProps) {
   const { theme, toggleTheme } = useTheme();
-  // const { logout } = useAuth();
+  const { logout } = useAuth();
 
   return (
     <aside
@@ -147,7 +147,7 @@ export default function Sidebar({
           </div>
 
           <Button
-            // onClick={() => logout()}
+            onClick={() => logout()}
             variant="ghost"
             className="flex items-center w-full px-3 py-2 rounded-lg mt-4 transition-colors text-left text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
           >
