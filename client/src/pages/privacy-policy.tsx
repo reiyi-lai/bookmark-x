@@ -1,29 +1,29 @@
 // import React from "react";
-import { Button } from "../components/ui/button";
-import { ArrowLeft } from "lucide-react";
+// import { Button } from "../components/ui/button";
+// import { ArrowLeft } from "lucide-react";
 
 export default function PrivacyPolicy() {
-  const goBack = () => {
-    window.history.back();
-  };
+//   const goBack = () => {
+//     window.history.back();
+//   };
 
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <Button
+          {/* <Button
             variant="ghost"
             onClick={goBack}
             className="mb-4 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
-          </Button>
+          </Button> */}
           <h1 className="text-3xl font-bold text-foreground mb-2">Privacy Policy</h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          {/* <p className="text-gray-600 dark:text-gray-400">
             Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-          </p>
+          </p> */}
         </div>
 
         {/* Content */}
