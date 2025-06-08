@@ -25,11 +25,11 @@ const corsOptions = {
     
     // List of allowed origins
     const allowedOrigins = [
-      'http://localhost:3000',     // Server itself (for internal requests)
-      'http://localhost:3001',     // Frontend dev server
-      'https://bookmark-x.info',   // Production frontend
-      'https://wwww.bookmark-x.info',
-      'chrome-extension://*'       // Chrome extension (wildcard)
+      'http://localhost:3000',        // Server itself (for internal requests)
+      'http://localhost:3001',        // Frontend dev server
+      'https://bookmark-x.info',      // Production frontend
+      'https://www.bookmark-x.info',  // Production frontend (www subdomain)
+      'chrome-extension://*'          // Chrome extension (wildcard)
     ];
     
     // Check if origin is allowed
@@ -98,11 +98,10 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
+  // In development: setup Vite for local full-stack development  
+  // In production: Railway serves API only, Vercel serves frontend
   if (app.get("env") === "development") {
-    console.log('Setting up Vite for development...');
+    console.log('Setting up Vite for local development...');
     await setupVite(app, server);
   } else {
     console.log('Production: Railway serves API only, Vercel serves frontend');
