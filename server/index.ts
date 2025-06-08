@@ -1,18 +1,36 @@
+import dotenv from 'dotenv';
+// Load environment variables FIRST, before any other imports that might use them
+console.log('🔧 Loading environment variables...');
+dotenv.config();
+console.log('🔧 Railway Debug - NODE_ENV:', process.env.NODE_ENV);
+console.log('🔧 Railway Debug - PORT:', process.env.PORT);
+console.log('🔧 Railway Debug - SUPABASE vars present:', !!process.env.SUPABASE_URL, !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+console.log('🔧 Environment Debug - SUPABASE_URL present:', !!process.env.SUPABASE_URL);
+console.log('🔧 SUPABASE_SERVICE_ROLE_KEY present:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cors from 'cors';
-import dotenv from 'dotenv';
-
-// Load environment variables from .env file
-dotenv.config();
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
-// Enable CORS for all origins in development
-app.use(cors());
+// List of allowed origins
+// Enable CORS with proper configuration for credentials
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',     // Server itself (for internal requests)
+    'http://localhost:3001',     // Frontend dev server
+    'https://bookmark-x.info',    // Production frontend
+    'chrome-extension://*'     // Chrome extension
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-twitter-id']
+};
+app.use(cors(corsOptions));
 
 // Logging middleware
 app.use((req, res, next) => {
@@ -46,7 +64,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  console.log('🚀 Starting server setup...');
   const server = await registerRoutes(app);
+  console.log('✅ Routes registered successfully');
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -60,16 +80,18 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
+    console.log('Setting up Vite...');
     await setupVite(app, server);
   } else {
+    console.log('Setting up static serving...');
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 3000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 3000; // Changed from 5000 to 3000 to avoid port conflict
+  // Use Railway's PORT environment variable or fallback to 3000
+  const port = process.env.PORT || 3000;
+  console.log(`Starting server on port ${port}...`);
   server.listen(port, () => {
     log(`serving on port ${port}`);
+    console.log(`✅ Server successfully started on port ${port}`);
   });
 })();
