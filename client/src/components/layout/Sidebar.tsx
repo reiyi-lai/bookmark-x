@@ -39,7 +39,7 @@ export default function Sidebar({
       } w-64 bg-white dark:bg-gray-900 h-screen border-r border-gray-200 dark:border-gray-800 transition-transform duration-300 ease-in-out fixed lg:static z-30`}
     >
       <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center">
-        <h1 className="text-2xl font-bold text-blue-500 flex items-center flex-1 min-w-0">
+        <h1 className="text-2xl font-bold text-foreground flex items-center flex-1 min-w-0">
           <img 
             src="/generated-icon.png" 
             alt="Bookmark-X Logo" 
@@ -83,7 +83,7 @@ export default function Sidebar({
                 variant="ghost"
                 className={`flex items-center w-full px-3 py-2 rounded-lg mb-1 transition-colors text-left ${
                   selectedCategoryId === 0
-                    ? "bg-gray-100 text-blue-500 dark:bg-gray-800 dark:text-blue-400"
+                    ? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
                     : "hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-300"
                 }`}
               >
@@ -102,7 +102,7 @@ export default function Sidebar({
                   variant="ghost"
                   className={`flex items-center w-full px-3 py-2 rounded-lg mb-1 transition-colors text-left ${
                     selectedCategoryId === category.id
-                      ? "bg-gray-100 text-blue-500 dark:bg-gray-800 dark:text-blue-400"
+                      ? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
                       : "hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-300"
                   }`}
                 >
@@ -153,7 +153,7 @@ export default function Sidebar({
           <Button
             onClick={() => logout()}
             variant="ghost"
-            className="flex items-center w-full px-3 py-2 rounded-lg mt-4 transition-colors text-left text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            className="flex items-center w-full px-3 py-2 rounded-lg mt-4 transition-colors text-left text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
           >
             <LogOut className="h-4 w-4 mr-2" />
             Logout
