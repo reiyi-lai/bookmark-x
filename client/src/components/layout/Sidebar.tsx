@@ -1,4 +1,4 @@
-import React from "react";
+// import React from "react";
 import { Category } from "@shared/schema";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
@@ -7,8 +7,9 @@ import { Label } from "../ui/label";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { getMaterialIcon } from "../../utils/categoryIcons";
-import { Bookmark, X, Moon, LogOut } from "lucide-react";
+import { X, Moon, LogOut, Shield } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
+import { Link } from "wouter";
 
 interface SidebarProps {
   categories: Category[];
@@ -149,6 +150,16 @@ export default function Sidebar({
               className="ml-auto"
             />
           </div>
+
+          <Link href="/privacy-policy">
+            <Button
+              variant="ghost"
+              className="flex items-center w-full px-3 py-2 rounded-lg mt-2 transition-colors text-left text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              <Shield className="h-4 w-4 mr-2" />
+              Privacy Policy
+            </Button>
+          </Link>
 
           <Button
             onClick={() => logout()}

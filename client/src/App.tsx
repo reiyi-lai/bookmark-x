@@ -5,12 +5,13 @@ import { Toaster } from "./components/ui/toaster";
 import NotFound from "./pages/not-found";
 import Home from "./pages/home";
 import LoggedOut from "./pages/logged-out";
+import PrivacyPolicy from "./pages/privacy-policy";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { EmailSignupHandler } from "./components/auth/EmailSignupHandler";
 
 function Router() {
-  const { twitterAuth, appAuth, isLoading } = useAuth();
+  const { twitterAuth, isLoading } = useAuth();
 
   // Show loading while auth is initializing
   if (isLoading) {
@@ -30,6 +31,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route component={NotFound} />
     </Switch>
   );
