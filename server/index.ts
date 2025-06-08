@@ -10,7 +10,7 @@ console.log('🔧 SUPABASE_SERVICE_ROLE_KEY present:', !!process.env.SUPABASE_SE
 
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { setupVite, log } from "./vite";
 import cors from 'cors';
 
 const app = express();
@@ -101,11 +101,11 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
-    console.log('Setting up Vite...');
+    console.log('Setting up Vite for development...');
     await setupVite(app, server);
   } else {
-    console.log('Setting up static serving...');
-    serveStatic(app);
+    console.log('Production: Railway serves API only, Vercel serves frontend');
+    // No static serving needed - Railway is API-only
   }
 
   // Use Railway's PORT environment variable or fallback to 3000
