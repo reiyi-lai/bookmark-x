@@ -17,15 +17,36 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
-// List of allowed origins
 // Enable CORS with proper configuration for credentials
 const corsOptions = {
-  origin: [
-    'http://localhost:3000',     // Server itself (for internal requests)
-    'http://localhost:3001',     // Frontend dev server
-    'https://bookmark-x.info',    // Production frontend
-    'chrome-extension://*'     // Chrome extension
-  ],
+  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // List of allowed origins
+    const allowedOrigins = [
+      'http://localhost:3000',     // Server itself (for internal requests)
+      'http://localhost:3001',     // Frontend dev server
+      'https://bookmark-x.info',   // Production frontend
+      'chrome-extension://*'       // Chrome extension (wildcard)
+    ];
+    
+    // Check if origin is allowed
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      if (allowedOrigin.endsWith('*')) {
+        // Handle wildcard patterns like 'chrome-extension://*'
+        return origin.startsWith(allowedOrigin.slice(0, -1));
+      }
+      return origin === allowedOrigin;
+    });
+    
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-twitter-id']
