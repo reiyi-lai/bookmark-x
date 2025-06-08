@@ -22,16 +22,23 @@ function Router() {
     );
   }
 
-  // Show logged-out page if no Twitter auth
-  if (!twitterAuth.isAuthenticated) {
-    return <LoggedOut />;
-  }
-
-  // Show main app if authenticated
+  // Public routes (no auth required)
   return (
     <Switch>
-      <Route path="/" component={Home} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
+      
+      {/* Protected routes */}
+      <Route path="/">
+        {() => {
+          // Show logged-out page if no Twitter auth
+          if (!twitterAuth.isAuthenticated) {
+            return <LoggedOut />;
+          }
+          // Show main app if authenticated
+          return <Home />;
+        }}
+      </Route>
+      
       <Route component={NotFound} />
     </Switch>
   );

@@ -151,7 +151,7 @@ export default function Sidebar({
             />
           </div>
 
-          <Link href="/privacy-policy">
+          {/* <Link href="/privacy-policy">
             <Button
               variant="ghost"
               className="flex items-center w-full px-3 py-2 rounded-lg mt-2 transition-colors text-left text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -159,7 +159,7 @@ export default function Sidebar({
               <Shield className="h-4 w-4 mr-2" />
               Privacy Policy
             </Button>
-          </Link>
+          </Link> */}
 
           <Button
             onClick={() => logout()}
