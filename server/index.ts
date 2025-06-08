@@ -28,6 +28,7 @@ const corsOptions = {
       'http://localhost:3000',     // Server itself (for internal requests)
       'http://localhost:3001',     // Frontend dev server
       'https://bookmark-x.info',   // Production frontend
+      'https://wwww.bookmark-x.info',
       'chrome-extension://*'       // Chrome extension (wildcard)
     ];
     
