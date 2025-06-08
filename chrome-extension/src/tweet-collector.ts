@@ -57,7 +57,6 @@ async function collectWithNewTurboMethod(
   const tweetMap = new Map<string, Tweet>();
   let consecutiveNoNewTweets = 0;
   let scrollAttempts = 0;
-  let lastScrollHeight = 0;
   let reachedMilestone = false;
   
   // Wait for initial tweets to load (up to 10 seconds)
@@ -73,14 +72,74 @@ async function collectWithNewTurboMethod(
     return [];
   }
   
-  const waitTime = 200;
   console.log('Bookmark-X: Starting tweet collection...');
+
+  async function simulateVirtualScroll() {
+    const scrollableParent = document.body;
+    
+    const tweets = scrollableParent.querySelectorAll('[data-testid="tweet"]');
+    if (tweets.length === 0) return false;
+
+    const lastTweet = tweets[tweets.length - 1] as HTMLElement;
+    
+    // console.log('Bookmark-X: Scroll attempt:', {
+    //   currentScroll: scrollableParent.scrollTop,
+    //   scrollHeight: scrollableParent.scrollHeight,
+    //   lastTweetOffset: lastTweet.offsetTop,
+    //   visibleTweets: tweets.length
+    // });
+
+    // Calculate optimal scroll step (about 2-3 screens worth of content)
+    const viewportHeight = window.innerHeight;
+    const scrollStep = Math.min(viewportHeight * 3, 3000);
+    const currentScroll = scrollableParent.scrollTop;
+    const targetScroll = currentScroll + scrollStep;
+
+    // Try multiple scroll methods
+    try {
+      // Method 1: Direct scroll
+      scrollableParent.scrollTop = targetScroll;
+      
+      // Method 2: Smooth scroll
+      scrollableParent.scroll({
+        top: targetScroll,
+        behavior: 'smooth'
+      });
+    //   console.log('Bookmark-X: Smooth scroll result:', {
+    //     beforeScroll: scrollableParent.scrollTop,
+    //     targetScroll,
+    //     afterScroll: scrollableParent.scrollTop,
+    //     scrollChange: scrollableParent.scrollTop - targetScroll
+    //   });
+
+      // Method 3: Element scroll into view
+      lastTweet.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      // Dispatch scroll event after physical scroll
+      const scrollEvent = new Event('scroll', { bubbles: true });
+      scrollableParent.dispatchEvent(scrollEvent);
+
+      // Log scroll result
+      console.log('Bookmark-X: Scroll attempt result:', {
+        beforeScroll: currentScroll,
+        targetScroll,
+        afterScroll: scrollableParent.scrollTop,
+        scrollChange: scrollableParent.scrollTop - currentScroll
+      });
+
+    } catch (error) {
+      console.error('Bookmark-X: Error during scroll:', error);
+    }
+
+    // Wait for potential content load
+    await new Promise(resolve => setTimeout(resolve, 175));
+
+    return true;
+  }
   
   while (consecutiveNoNewTweets < 8) {
     const currentTweetElements = document.querySelectorAll('[data-testid="tweet"]');
     const previousCount = tweetMap.size;
-    
-    console.log(`Bookmark-X: Processing ${currentTweetElements.length} tweet elements on page...`);
     
     for (const tweetElement of Array.from(currentTweetElements)) {
       try {
@@ -146,36 +205,25 @@ async function collectWithNewTurboMethod(
     }
     
     const newTweetsFound = tweetMap.size - previousCount;
-    console.log(`Bookmark-X: ${newTweetsFound} new tweets found (total: ${tweetMap.size})`);
-    
     if (newTweetsFound > 0) {
       consecutiveNoNewTweets = 0;
+      console.log(`Bookmark-X: Found ${newTweetsFound} new tweets (total: ${tweetMap.size})`);
     } else {
       consecutiveNoNewTweets++;
-      console.log(`Bookmark-X: No new tweets found. Consecutive count: ${consecutiveNoNewTweets}/10`);
+      console.log(`Bookmark-X: No new tweets found. Consecutive count: ${consecutiveNoNewTweets}/8`);
     }
-    
-    // Check if we reached the bottom
-    const currentScrollHeight = document.body.scrollHeight;
-    const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    const windowHeight = window.innerHeight;
-    const isAtBottom = (currentScrollTop + windowHeight) >= (currentScrollHeight - 100);
-    
-    // If height hasn't changed AND we're at bottom AND we've scrolled many times
-    if (currentScrollHeight === lastScrollHeight && isAtBottom && scrollAttempts > 10) {
-      console.log(`Bookmark-X: Hit bottom of page`);
+
+    // Try to trigger virtual scroll
+    const scrolled = await simulateVirtualScroll();
+    if (!scrolled) {
+      console.log('Bookmark-X: Could not trigger virtual scroll');
+      break;
     }
-    lastScrollHeight = currentScrollHeight;
-    
-    // Scroll to bottom of page
-    window.scrollTo(0, document.body.scrollHeight);
-    
-    // Wait for new content
-    await new Promise(resolve => setTimeout(resolve, waitTime));
+
     scrollAttempts++;
   }
   
-  console.log(`Bookmark-X: Tweet collection completed. Reason: ${consecutiveNoNewTweets >= 10 ? 'No new tweets found' : 'Unknown'}. Total collected: ${tweetMap.size}`);
+  console.log(`Bookmark-X: Tweet collection completed. Total collected: ${tweetMap.size}`);
   return Array.from(tweetMap.values());
 }
 
