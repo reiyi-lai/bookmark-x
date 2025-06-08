@@ -73,12 +73,14 @@ async function collectWithNewTurboMethod(
     return [];
   }
   
-  const waitTime = 175;
+  const waitTime = 200;
   console.log('Bookmark-X: Starting tweet collection...');
   
   while (consecutiveNoNewTweets < 8) {
     const currentTweetElements = document.querySelectorAll('[data-testid="tweet"]');
     const previousCount = tweetMap.size;
+    
+    console.log(`Bookmark-X: Processing ${currentTweetElements.length} tweet elements on page...`);
     
     for (const tweetElement of Array.from(currentTweetElements)) {
       try {
@@ -144,10 +146,13 @@ async function collectWithNewTurboMethod(
     }
     
     const newTweetsFound = tweetMap.size - previousCount;
+    console.log(`Bookmark-X: ${newTweetsFound} new tweets found (total: ${tweetMap.size})`);
+    
     if (newTweetsFound > 0) {
       consecutiveNoNewTweets = 0;
     } else {
       consecutiveNoNewTweets++;
+      console.log(`Bookmark-X: No new tweets found. Consecutive count: ${consecutiveNoNewTweets}/10`);
     }
     
     // Check if we reached the bottom
@@ -156,8 +161,9 @@ async function collectWithNewTurboMethod(
     const windowHeight = window.innerHeight;
     const isAtBottom = (currentScrollTop + windowHeight) >= (currentScrollHeight - 100);
     
-    if (currentScrollHeight === lastScrollHeight && isAtBottom && scrollAttempts > 6) {
-      consecutiveNoNewTweets++;
+    // If height hasn't changed AND we're at bottom AND we've scrolled many times
+    if (currentScrollHeight === lastScrollHeight && isAtBottom && scrollAttempts > 10) {
+      console.log(`Bookmark-X: Hit bottom of page`);
     }
     lastScrollHeight = currentScrollHeight;
     
@@ -169,6 +175,7 @@ async function collectWithNewTurboMethod(
     scrollAttempts++;
   }
   
+  console.log(`Bookmark-X: Tweet collection completed. Reason: ${consecutiveNoNewTweets >= 10 ? 'No new tweets found' : 'Unknown'}. Total collected: ${tweetMap.size}`);
   return Array.from(tweetMap.values());
 }
 
