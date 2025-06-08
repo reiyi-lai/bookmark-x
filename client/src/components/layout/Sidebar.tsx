@@ -153,7 +153,7 @@ export default function Sidebar({
           <Button
             onClick={() => logout()}
             variant="ghost"
-            className="flex items-center w-full px-3 py-2 rounded-lg mt-4 transition-colors text-left text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            className="flex items-center w-full px-3 py-2 rounded-lg mt-4 transition-colors text-left text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
           >
             <LogOut className="h-4 w-4 mr-2" />
             Logout
