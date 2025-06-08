@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ClientBookmark as Bookmark } from "@shared/schema";
 import BookmarkCard from "./BookmarkCard";
 import { Skeleton } from "../ui/skeleton";
@@ -6,15 +7,26 @@ interface BookmarksGridProps {
   bookmarks: Bookmark[];
   isLoading: boolean;
   onChangeCategory: (bookmark: Bookmark) => void;
-  onDeleteBookmark: (id: string) => void;
+  onDeleteBookmark?: (id: string) => void;
 }
 
 export default function BookmarksGrid({
   bookmarks,
   isLoading,
   onChangeCategory,
-  onDeleteBookmark
+  // onDeleteBookmark
 }: BookmarksGridProps) {
+  // Local state to track deleted bookmarks (frontend only)
+  const [deletedBookmarkIds, setDeletedBookmarkIds] = useState<Set<string>>(new Set());
+
+  // Filter out locally deleted bookmarks
+  const visibleBookmarks = bookmarks.filter(bookmark => !deletedBookmarkIds.has(bookmark.id));
+
+  // Handle local deletion
+  const handleLocalDelete = (bookmarkId: string) => {
+    setDeletedBookmarkIds(prev => new Set([...prev, bookmarkId]));
+  };
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -45,7 +57,7 @@ export default function BookmarksGrid({
     );
   }
 
-  if (bookmarks.length === 0) {
+  if (visibleBookmarks.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <div className="rounded-full bg-muted p-3 mb-3">
@@ -66,7 +78,7 @@ export default function BookmarksGrid({
         </div>
         <h3 className="font-semibold text-lg">No bookmarks found</h3>
         <p className="text-muted-foreground mt-1">
-          Use the Import button above to upload your Twitter bookmarks JSON file.
+          Bookmark more tweets to see them here.
         </p>
       </div>
     );
@@ -74,12 +86,12 @@ export default function BookmarksGrid({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {bookmarks.map((bookmark) => (
+      {visibleBookmarks.map((bookmark) => (
         <BookmarkCard
           key={bookmark.id}
           bookmark={bookmark}
           onChangeCategory={() => onChangeCategory(bookmark)}
-          onDelete={() => onDeleteBookmark(bookmark.id)}
+          onDelete={() => handleLocalDelete(bookmark.id)}
         />
       ))}
     </div>
