@@ -2,7 +2,7 @@ import type { ImportedBookmark } from '../../shared/schema';
 
 console.log('Bookmark-X background script loaded');
 
-const SERVER_URL = 'http://localhost:3000';
+const SERVER_URL = 'https://bookmark-x-production.up.railway.app';
 
 // Twitter user info received from content script
 let twitterUser: { id: string; username: string } | null = null;
