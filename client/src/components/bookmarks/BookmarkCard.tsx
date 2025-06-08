@@ -113,7 +113,7 @@ export default function BookmarkCard({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+            className="h-8 w-8 text-destructive hover:text-destructive/90"
             onClick={onDelete}
           >
             <Trash2 className="h-4 w-4" />
