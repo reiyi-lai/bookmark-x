@@ -77,52 +77,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
         stats.categorized[category.id] = 0;
       });
 
-      // Save bookmark to Supabase
-      for (const bookmark of processedBookmarks) {
+      // Batch check for duplicates to improve performance
+      const tweetIds = processedBookmarks.map(bookmark => bookmark.id);
+      
+      const { data: existingBookmarks } = await supabase
+        .from('bookmarks')
+        .select('tweet_id')
+        .eq('user_id', userId)
+        .in('tweet_id', tweetIds);
+
+      const existingTweetIds = new Set(
+        existingBookmarks?.map(b => b.tweet_id) || []
+      );
+
+      // Filter out duplicates
+      const newBookmarks = processedBookmarks.filter(
+        bookmark => !existingTweetIds.has(bookmark.id)
+      );
+
+      if (newBookmarks.length === 0) {
+        return res.json({ 
+          success: true, 
+          stats: {
+            total: processedBookmarks.length,
+            imported: 0,
+            categorized: {}
+          },
+          userId: userId,
+          message: "All bookmarks already exist"
+        });
+      }
+
+      console.log(`Importing ${newBookmarks.length} new bookmarks (${existingTweetIds.size} duplicates skipped)`);
+
+      // Prepare all bookmark data for batch insert
+      const bookmarkDataArray = newBookmarks.map(bookmark => ({
+        tweet_id: bookmark.id,
+        tweet_url: bookmark.url,
+        tweet_content: bookmark.text,
+        author_username: bookmark.author.username,
+        author_display_name: bookmark.author.name,
+        author_profile_picture: bookmark.author.profile_image_url,
+        tweet_date: bookmark.created_at,
+        category_id: bookmark.categoryId,
+        media_attachments: bookmark.media_attachments,
+        user_id: userId
+      }));
+
+      // Database batch operations
+      const DB_BATCH_SIZE = 500;
+      const allInsertedBookmarks: any[] = [];
+      
+      console.log(`Processing ${bookmarkDataArray.length} bookmarks in database chunks of ${DB_BATCH_SIZE}`);
+      
+      for (let i = 0; i < bookmarkDataArray.length; i += DB_BATCH_SIZE) {
+        const chunk = bookmarkDataArray.slice(i, i + DB_BATCH_SIZE);
+        const chunkNumber = Math.floor(i / DB_BATCH_SIZE) + 1;
+        const totalChunks = Math.ceil(bookmarkDataArray.length / DB_BATCH_SIZE);
+        
+        console.log(`Inserting database chunk ${chunkNumber}/${totalChunks} (${chunk.length} bookmarks)`);
+        
         try {
-          // Check for duplicates
-          const { data: existing } = await supabase
+          const { data: insertedBookmarks, error: insertError } = await supabase
             .from('bookmarks')
-            .select('id')
-            .eq('tweet_id', bookmark.id)
-            .eq('user_id', userId)
-            .single();
-
-          if (existing) {
-            continue; 
-          }
-
-          // Prepare bookmark data for Supabase
-          const bookmarkData = {
-            tweet_id: bookmark.id,
-            tweet_url: bookmark.url,
-            tweet_content: bookmark.text,
-            author_username: bookmark.author.username,
-            author_display_name: bookmark.author.name,
-            author_profile_picture: bookmark.author.profile_image_url,
-            tweet_date: bookmark.created_at,
-            category_id: bookmark.categoryId,
-            media_attachments: bookmark.media_attachments,
-            user_id: userId
-          };
-
-          // Save to Supabase
-          const { error: insertError } = await supabase
-            .from('bookmarks')
-            .insert(bookmarkData);
+            .insert(chunk)
+            .select('category_id');
 
           if (insertError) {
-            console.error(`Error saving bookmark ${bookmark.id}:`, insertError);
-            continue;
+            console.error(`Error inserting database chunk ${chunkNumber}:`, insertError);
+            throw insertError;
           }
 
-          // Update statistics
-          stats.imported++;
-          stats.categorized[bookmark.categoryId] = (stats.categorized[bookmark.categoryId] || 0) + 1;
+          if (insertedBookmarks) {
+            allInsertedBookmarks.push(...insertedBookmarks);
+          }
+          
+          // Add a small delay between chunks to be respectful to Supabase
+          if (i + DB_BATCH_SIZE < bookmarkDataArray.length) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          
         } catch (error) {
-          console.error(`Error processing bookmark ${bookmark.id}:`, error);
+          console.error(`Failed to insert database chunk ${chunkNumber}:`, error);
+          throw error;
         }
       }
+
+      // Calculate statistics from all inserted bookmarks
+      stats.imported = allInsertedBookmarks.length;
+      
+      // Count categories from inserted bookmarks
+      allInsertedBookmarks.forEach(bookmark => {
+        const categoryId = bookmark.category_id;
+        stats.categorized[categoryId] = (stats.categorized[categoryId] || 0) + 1;
+      });
 
       res.json({ 
         success: true, 
