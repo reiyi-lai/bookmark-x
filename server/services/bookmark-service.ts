@@ -50,26 +50,40 @@ export class BookmarkService {
     // Initialize ML categorizer
     const categorizer = createCategorizer(categories);
 
-    // Process each bookmark with categorization
+    // Filter out bookmarks without essential data
+    const validBookmarks = bookmarksData.filter(bookmark => 
+      bookmark.id && bookmark.text
+    );
+
+    if (validBookmarks.length === 0) {
+      return {
+        bookmarks: [],
+        categories
+      };
+    }
+
+    console.log(`Processing ${validBookmarks.length} bookmarks with batch categorization...`);
+
+    // Extract texts for batch processing
+    const texts = validBookmarks.map(bookmark => bookmark.text);
+
+    // Batch categorize all texts at once
+    const categoryIds = await categorizer.categorizeBatch(texts);
+
+    // Combine bookmarks with their categories
     const processedBookmarks: ProcessedBookmark[] = [];
     
-    for (const bookmark of bookmarksData) {
-      try {
-        // Ensure bookmark has essential data
-        if (!bookmark.id || !bookmark.text) {
-          continue;
-        }
+    for (let i = 0; i < validBookmarks.length; i++) {
+      const bookmark = validBookmarks[i];
+      const categoryId = categoryIds[i];
 
-        const categoryId = await categorizer.categorize(bookmark.text);
-        
-        processedBookmarks.push({
-          ...bookmark,
-          categoryId
-        });
-      } catch (error) {
-        console.error(`Error categorizing bookmark ${bookmark.id}:`, error);
-      }
+      processedBookmarks.push({
+        ...bookmark,
+        categoryId
+      });
     }
+
+    console.log(`Successfully processed ${processedBookmarks.length} bookmarks`);
 
     return {
       bookmarks: processedBookmarks,
