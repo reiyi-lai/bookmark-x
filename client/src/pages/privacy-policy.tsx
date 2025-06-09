@@ -33,15 +33,15 @@ export default function PrivacyPolicy() {
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">Introduction</h2>
               <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                Bookmark-X ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our Chrome extension and web application.
+                Bookmark-X is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our Chrome extension and web application. By using or accessing the Services in any manner ("TweetsMash"), you acknowledge that you accept the practices and policies outlined in this Privacy Policy
               </p>
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-foreground mb-3">1. Information We Collect</h2>
+              <h2 className="text-xl font-semibold text-foreground mb-3">Information We Collect</h2>
               <div className="space-y-3">
                 <div>
-                  <h3 className="font-medium text-foreground mb-2">1.1 Twitter/X Data</h3>
+                  <h3 className="font-medium text-foreground mb-2">Twitter/X Data</h3>
                   <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                     Our extension collects publicly available Twitter/X bookmark data including:
                   </p>
@@ -54,7 +54,7 @@ export default function PrivacyPolicy() {
                 </div>
                 
                 <div>
-                  <h3 className="font-medium text-foreground mb-2">1.2 Usage Data</h3>
+                  <h3 className="font-medium text-foreground mb-2">Usage Data</h3>
                   <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                     We collect information about how you use our service, including category assignments and user preferences.
                   </p>
@@ -63,7 +63,7 @@ export default function PrivacyPolicy() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-foreground mb-3">2. How We Use Your Information</h2>
+              <h2 className="text-xl font-semibold text-foreground mb-3">How We Use Your Information</h2>
               <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
                 We use the collected information to:
               </p>
@@ -76,7 +76,7 @@ export default function PrivacyPolicy() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-foreground mb-3">3. Data Sharing and Third Parties</h2>
+              <h2 className="text-xl font-semibold text-foreground mb-3">Data Sharing</h2>
               <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
                 We do not sell your personal information. We may share data only in the following circumstances:
               </p>
@@ -89,7 +89,7 @@ export default function PrivacyPolicy() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-foreground mb-3">Your Rights</h2>
+              <h2 className="text-xl font-semibold text-foreground mb-3">Your Rights with respect to Your Data</h2>
               <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
                 You have the right to:
               </p>
@@ -105,7 +105,7 @@ export default function PrivacyPolicy() {
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">Updates to This Policy</h2>
               <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                We may update this Privacy Policy periodically. We will notify you of significant changes through our extension or website.
+                We may update this Privacy Policy periodically and will notify you of significant changes through our extension or website.
               </p>
             </section>
 
