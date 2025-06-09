@@ -1,6 +1,6 @@
 # Bookmark-X - Twitter Bookmark Organizer
 
-Bookmark-X helps you automatically organize your Twitter bookmarks into meaningful categories using ML-powered classification.
+Bookmark-X is a Chrome extension that helps you automatically organize your Twitter bookmarks into meaningful categories using ML-powered classification.
 
 ## Project Structure
 
