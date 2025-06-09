@@ -2,26 +2,25 @@
 
 Bookmark-X helps you automatically organize your Twitter bookmarks into meaningful categories using ML-powered classification.
 
-## 🚀 Project Structure
+## Project Structure
 
 ```
 BookmarkBuddy/
 ├── client/                    # React frontend (deployed to Vercel)
-├── server/                    # Express.js backend
-├── chrome-extension/          # Chrome extension source
+├── server/                    # Express.js backend (deployed to Railway)
+├── chrome-extension/          # Chrome extension source (pending approval by Chrome webstore)
 ├── shared/                    # Shared types and schemas
 └── supabase/                  # Database migrations and config
 ```
 
-## 🚀 Soft Launch Plan (Target: June 6)
+## 🚀 Launch Plan
 
 ### UI Changes (2 days)
 - **UI Enhancements (1-1.5 days)**
   - [x] Show total bookmark count
-  - [ ] Display tweet author details (name, profile picture, username)
-  - [ ] Expandable tweets with full content + media
-  - [ ] Interactive loading screen with progress indicators
-  - [ ] Fix dark mode for sidebar
+  - [x] Display tweet author details (name, profile picture, username)
+  - [x] Interactive loading screen with progress indicators
+  - [x] Fix dark mode for sidebar
   
 - **Category System (0.5 days)**
   - [ ] Add new categories (startup/product ideas, research papers)
@@ -34,16 +33,15 @@ BookmarkBuddy/
 - [ ] Enhance categorization accuracy and differentiation
 
 ### Chrome Extension Build (3 days)
-- [ ] Basic manifest and content script setup
-- [ ] Twitter bookmark page detection
-- [ ] One-click categorization
-- [ ] Auth integration with main app
+- [x] Basic manifest and content script setup
+- [x] Twitter bookmark page detection
+- [x] One-click categorization
+- [x] Auth integration with main app
 
 ### User Management (2 days)
-- [ ] Simple email-based signup flow (don't necessarily need password)
-- [ ] Database schema updates
-- [ ] User data persistence
-- [ ] Basic account management
+- [x] Simple email-based signup flow (don't necessarily need password)
+- [x] Database schema updates
+- [x] User data persistence
 
 ### Testing & Launch (1 day)
 - [ ] End-to-end testing
@@ -91,35 +89,20 @@ SUPABASE_PROJECT_REF=
 HUGGINGFACE_API_KEY=
 ```
 
-3. **Start development servers:**
-```bash
-# Terminal 1: Start backend
-npm run dev
+Create `.env` in /client directory:
+```
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+```
 
-# Terminal 2: Start frontend
-cd client && npm run dev
+3. **Start development server:**
+```bash
+npm run dev
 ```
 
 4. **Access the application:**
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:3000/api
-
-### Production Deployment
-
-#### Frontend (Vercel)
-See detailed instructions in [`client/README.md`](./client/README.md)
-
-1. Deploy the `/client` directory to Vercel
-2. Framework preset: **Vite**
-3. Root directory: `/client`
-4. Auto-detected build settings work perfectly
-
-#### Backend
-Deploy the Express.js server to your preferred hosting provider:
-- Railway
-- Heroku  
-- DigitalOcean
-- AWS/GCP/Azure
 
 #### Environment Configuration
 The client automatically detects the environment:
