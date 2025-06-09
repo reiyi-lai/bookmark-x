@@ -1,6 +1,6 @@
 // import React from 'react';
 import { Button } from '../components/ui/button';
-import { Bookmark, LogIn } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 
 export default function LoggedOut() {
   const handleGoToBookmarks = () => {
@@ -12,9 +12,13 @@ export default function LoggedOut() {
       <div className="max-w-md w-full text-center space-y-6">
         {/* Logo */}
         <div className="flex items-center justify-center">
-          <div className="bg-blue-500 p-3 rounded-full">
-            <Bookmark className="h-8 w-8 text-white" />
-          </div>
+          {/* <div className="bg-blue-500 p-3 rounded-full"> */}
+            <img 
+              src="/generated-icon.png" 
+              alt="Bookmark-X Logo" 
+              className="h-8 w-8" 
+            />
+          {/* </div> */}
         </div>
 
         {/* Title */}
