@@ -12,7 +12,7 @@ export class TweetCarousel {
   private currentIndex = 0;
   private transitionInProgress = false;
   private intervalId: number | null = null;
-  private readonly ANIMATION_INTERVAL = 1000; // 1 second between transitions
+  private readonly ANIMATION_INTERVAL = 2000; // 2 second between transitions
   private readonly TRANSITION_DURATION = 500; // 500ms for the animation itself
 
   constructor(container: HTMLElement) {
