@@ -33,7 +33,7 @@ export default function PrivacyPolicy() {
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">Introduction</h2>
               <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                Bookmark-X is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our Chrome extension and web application. By using or accessing the Services in any manner ("TweetsMash"), you acknowledge that you accept the practices and policies outlined in this Privacy Policy
+                Bookmark-X is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our Chrome extension and web application. By using or accessing the Services in any manner ("Bookmark-X"), you acknowledge that you accept the practices and policies outlined in this Privacy Policy
               </p>
             </section>
 
