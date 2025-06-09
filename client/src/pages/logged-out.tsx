@@ -16,7 +16,7 @@ export default function LoggedOut() {
             <img 
               src="/generated-icon.png" 
               alt="Bookmark-X Logo" 
-              className="h-8 w-8" 
+              className="h-15 w-15" 
             />
           {/* </div> */}
         </div>
