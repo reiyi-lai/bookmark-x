@@ -5,7 +5,7 @@ Bookmark-X helps you automatically organize your Twitter bookmarks into meaningf
 ## Project Structure
 
 ```
-BookmarkBuddy/
+Bookmark-X/
 ├── client/                    # React frontend (deployed to Vercel)
 ├── server/                    # Express.js backend (deployed to Railway)
 ├── chrome-extension/          # Chrome extension source (pending approval by Chrome webstore)
