@@ -37,9 +37,7 @@ function extractProfilePicture(tweetElement: Element): string {
     const linkElement = tweetElement.querySelector('[role="link"]') as HTMLAnchorElement;
     if (linkElement?.href) {
       const handle = linkElement.href.split('/').pop();
-      if (handle && handle !== 'photo' && handle !== 'status') {
-        return `https://unavatar.io/twitter/${handle}`;
-      }
+      return `https://unavatar.io/twitter/${handle}`
     }
   } catch (error) {
     // Silent fallback
@@ -120,12 +118,12 @@ async function collectWithNewTurboMethod(
       scrollableParent.dispatchEvent(scrollEvent);
 
       // Log scroll result
-      console.log('Bookmark-X: Scroll attempt result:', {
-        beforeScroll: currentScroll,
-        targetScroll,
-        afterScroll: scrollableParent.scrollTop,
-        scrollChange: scrollableParent.scrollTop - currentScroll
-      });
+      // console.log('Bookmark-X: Scroll attempt result:', {
+      //   beforeScroll: currentScroll,
+      //   targetScroll,
+      //   afterScroll: scrollableParent.scrollTop,
+      //   scrollChange: scrollableParent.scrollTop - currentScroll
+      // });
 
     } catch (error) {
       console.error('Bookmark-X: Error during scroll:', error);
@@ -254,7 +252,11 @@ export async function handleBulkBookmark() {
     const startTime = Date.now();
     const allTweetData = await collectWithNewTurboMethod(1500, startTime, (tweet, count) => {
       carousel.addTweet(tweet);
-      progressText.textContent = `Collecting... ${count} bookmarks`;
+      
+      // Only update progress text at fixed count increments
+      if (count % 3 === 0 || count === 1) {
+        progressText.textContent = `Collecting... ${count} bookmarks`;
+      }
     });
     
     if (allTweetData.length === 0) {

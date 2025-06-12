@@ -12,7 +12,7 @@ export class TweetCarousel {
   private currentIndex = 0;
   private transitionInProgress = false;
   private intervalId: number | null = null;
-  private readonly ANIMATION_INTERVAL = 2000; // 2 second between transitions
+  private readonly ANIMATION_INTERVAL = 1200; // 2 second between transitions
   private readonly TRANSITION_DURATION = 500; // 500ms for the animation itself
 
   constructor(container: HTMLElement) {
@@ -46,12 +46,16 @@ export class TweetCarousel {
       top: 0;
       transform: translateX(50%) scale(0.8);
       width: 500px;
+      min-height: 250px;
       background: white;
       border-radius: 16px;
       padding: 50px;
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       transition: all ${this.TRANSITION_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1);
       opacity: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     `;
 
     const header = document.createElement('div');
