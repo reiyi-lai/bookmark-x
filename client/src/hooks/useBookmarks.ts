@@ -1,57 +1,47 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "../lib/queryClient";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import type { ClientBookmark as Bookmark } from "@shared/schema";
 import { useToast } from "./use-toast";
 
-export function useBookmarks(categoryId?: number, searchQuery?: string) {
+interface BookmarksResponse {
+  bookmarks: Bookmark[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+}
+
+export function useBookmarks(categoryId?: number, searchQuery?: string, page = 1, limit = 20) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [selectedBookmark, setSelectedBookmark] = useState<Bookmark | null>(null);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
 
-  // Construct the query params
   const queryParams = new URLSearchParams();
   if (categoryId) {
-    queryParams.append("categoryId", categoryId.toString());
+    queryParams.append("categoryId", String(categoryId));
   }
   if (searchQuery) {
     queryParams.append("search", searchQuery);
   }
+  queryParams.append("page", String(page));
+  queryParams.append("limit", String(limit));
+  queryParams.append("includeCount", "true");
 
-  // Fetch all bookmarks for counting
+  // Fetch bookmarks with pagination
   const {
-    data: allBookmarks = [],
-    isLoading: isLoadingAll,
-    refetch: refetchAll
-  } = useQuery({
-    queryKey: ["/api/bookmarks", "all"],
-    queryFn: async () => {
-      try {
-        return await apiRequest<Bookmark[]>({
-          endpoint: "/api/bookmarks",
-          method: "GET",
-          on401: "returnNull",
-        });
-      } catch (error) {
-        console.error("Error fetching all bookmarks:", error);
-        return [];
-      }
-    },
-  });
-
-  // Fetch filtered bookmarks
-  const {
-    data: bookmarks = [],
+    data: bookmarksData,
     isLoading,
     isError,
-    refetch: refetchFiltered
+    refetch: refetchBookmarks
   } = useQuery({
-    queryKey: ["/api/bookmarks", categoryId, searchQuery],
+    queryKey: ["/api/bookmarks", categoryId, searchQuery, page, limit],
     queryFn: async () => {
       const endpoint = `/api/bookmarks?${queryParams.toString()}`;
       try {
-        return await apiRequest<Bookmark[]>({
+        return await apiRequest<BookmarksResponse>({
           endpoint,
           method: "GET",
           on401: "returnNull",
@@ -66,13 +56,16 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
         throw error;
       }
     },
+    staleTime: 60 * 1000, // stale time matches server cache
   });
+  
+  const bookmarks = bookmarksData?.bookmarks || [];
+  const totalCount = bookmarksData?.pagination?.total || 0;
 
-  // Sync bookmarks (refetch all data)
+  // Sync bookmarks (refetch data)
   const { mutate: syncBookmarks, isPending: isSyncing } = useMutation({
     mutationFn: async () => {
-      await refetchAll();
-      await refetchFiltered();
+      await refetchBookmarks();
       return true;
     },
     onSuccess: () => {
@@ -90,17 +83,20 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
     },
   });
 
-  // Delete a bookmark
+  // Delete bookmark
   const { mutate: deleteBookmark, isPending: isDeleting } = useMutation({
-    mutationFn: async (bookmarkId: string) => {
-      return apiRequest({
+    mutationFn: async (bookmarkId: number) => {
+      await apiRequest({
         endpoint: `/api/bookmarks/${bookmarkId}`,
         method: "DELETE",
-        on401: "throw",
+        on401: "returnNull",
       });
+      return bookmarkId;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bookmarks"] });
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/bookmarks", categoryId, searchQuery, page, limit]
+      });
       toast({
         title: "Success",
         description: "Bookmark deleted successfully",
@@ -118,22 +114,19 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
 
   // Update bookmark category
   const { mutate: updateCategory, isPending: isUpdatingCategory } = useMutation({
-    mutationFn: async ({
-      bookmarkId,
-      categoryId,
-    }: {
-      bookmarkId: string;
-      categoryId: number;
-    }) => {
-      return apiRequest({
+    mutationFn: async ({ bookmarkId, categoryId: newCategoryId }: { bookmarkId: number; categoryId: number }) => {
+      await apiRequest({
         endpoint: `/api/bookmarks/${bookmarkId}/category`,
         method: "PATCH",
-        data: { categoryId },
-        on401: "throw",
+        data: { categoryId: newCategoryId },
+        on401: "returnNull",
       });
+      return { bookmarkId, categoryId: newCategoryId };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bookmarks"] });
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/bookmarks", categoryId, searchQuery, page, limit]
+      });
       setCategoryModalOpen(false);
       setSelectedBookmark(null);
       toast({
@@ -151,32 +144,6 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
     },
   });
 
-  // Recategorize all bookmarks
-  const { mutate: recategorizeBookmarks, isPending: isRecategorizing } = useMutation({
-    mutationFn: async () => {
-      return apiRequest({
-        endpoint: "/api/bookmarks/recategorize",
-        method: "POST",
-        on401: "throw",
-      });
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bookmarks"] });
-      toast({
-        title: "Success",
-        description: `Recategorized ${data.stats?.updated || 0} bookmarks`,
-      });
-    },
-    onError: (error: Error) => {
-      console.error("Error recategorizing bookmarks:", error);
-      toast({
-        title: "Error",
-        description: "Failed to recategorize bookmarks. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
   const openCategoryModal = useCallback((bookmark: Bookmark) => {
     setSelectedBookmark(bookmark);
     setCategoryModalOpen(true);
@@ -189,21 +156,19 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
 
   return {
     bookmarks,
-    allBookmarks,
-    isLoading: isLoading || isLoadingAll,
+    totalCount,
+    isLoading,
     isError,
-    refetch: refetchFiltered,
+    syncBookmarks,
+    isSyncing,
     deleteBookmark,
     isDeleting,
     updateCategory,
     isUpdatingCategory,
-    recategorizeBookmarks,
-    isRecategorizing,
     selectedBookmark,
+    setSelectedBookmark,
     categoryModalOpen,
     openCategoryModal,
-    closeModal,
-    syncBookmarks,
-    isSyncing
+    closeModal
   };
 }
