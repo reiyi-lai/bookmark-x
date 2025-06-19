@@ -15,49 +15,14 @@ Bookmark-X/
 
 ## 🚀 Launch Plan
 
-### UI Changes (2 days)
-- **UI Enhancements (1-1.5 days)**
-  - [x] Show total bookmark count
-  - [x] Display tweet author details (name, profile picture, username)
-  - [x] Interactive loading screen with progress indicators
-  - [x] Fix dark mode for sidebar
-  
-- **Category System (0.5 days)**
-  - [ ] Add new categories (startup/product ideas, research papers)
-  - [ ] Combine overlapping categories
-  - [ ] Refine existing categories
-
-### ML Enhancements (2 days)
-- [ ] Implement sentence-transformers via API
-- [ ] Optimize 'job opportunities' classification (a more scoped category)
-- [ ] Enhance categorization accuracy and differentiation
-
-### Chrome Extension Build (3 days)
-- [x] Basic manifest and content script setup
-- [x] Twitter bookmark page detection
-- [x] One-click categorization
-- [x] Auth integration with main app
-
-### User Management (2 days)
-- [x] Simple email-based signup flow (don't necessarily need password)
-- [x] Database schema updates
-- [x] User data persistence
-
-### Testing & Launch (1 day)
-- [ ] End-to-end testing
-- [ ] Performance optimization
-- [ ] Rate limiting implementation (to manage initial load)
-- [ ] Launch preparation
-
-### Post June-6 (1 week)
-- Think hard about distribution strategy
+See ```plan.md``` for roadmap.
 
 ## 🛠️ Tech Stack
 
 - **Frontend**: React, Vite, TailwindCSS, Radix UI
 - **Backend**: Express.js, TypeScript
 - **Database**: Supabase (PostgreSQL)
-- **ML**: currently DeepSeek, Embedding-based Similarity, TF-IDF + Keyword Matching
+- **ML**: currently DeepSeek, TF-IDF + Keyword Matching
 - **Authentication**: Supabase Auth
 
 ## 🔧 Setup and Installation
@@ -95,19 +60,27 @@ VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
 ```
 
-3. **Start development server:**
+3. **Start development servers:**
 ```bash
-npm run dev
+# Option 1: Run both server and client concurrently
+npm run dev:all
+
+# Option 2: Run server and client separately
+# Terminal 1:
+npm run dev:server
+
+# Terminal 2:
+npm run dev:client
 ```
 
 4. **Access the application:**
 - Frontend: http://localhost:3000
-- Backend API: http://localhost:3000/api
+- API: http://localhost:3001/api
 
 #### Environment Configuration
 The client automatically detects the environment:
-- **Development**: API calls to `http://localhost:3000`
-- **Production**: API calls to `https://bookmark-x.info`
+- **Development**: API calls to `http://localhost:3001`
+- **Production**: API calls to `https://bookmark-x-production.up.railway.app`
 
 ### Supabase Setup
 
@@ -140,14 +113,18 @@ npm run supabase:types
 
 1. Navigate to extension directory and install dependencies:
 ```bash
-cd chrome-extension
 npm install
 ```
 
 2. Build the extension:
 ```bash
-npm run build
+# For development (points to localhost servers)
+npm run build:extension:dev
+
+# For production (points to live servers)
+npm run build:extension
 ```
+Note: The development build connects to local servers (http://localhost:3001 for API and http://localhost:3000 for frontend), while the production build connects to the live servers.
 
 3. Load extension in Chrome:
    - Go to `chrome://extensions/` on Chrome
@@ -159,13 +136,13 @@ npm run build
 
 ```bash
 # Development
-npm run dev                    # Start backend server
-cd client && npm run dev       # Start frontend dev server
+npm run dev:server            # Start backend server only
+npm run dev:client            # Start frontend dev server only
+npm run dev:all              # Start both backend and frontend concurrently
 
-# Building
-npm run build                  # Build entire monorepo
-cd client && npm run build     # Build frontend only (for Vercel)
-npm run build:extension        # Build Chrome extension
+# Chrome Extension
+npm run build:extension:dev    # Build Chrome extension for development (localhost URLs)
+npm run build:extension        # Build Chrome extension for production (live URLs)
 
 # Database
 npm run supabase:*            # Various Supabase commands

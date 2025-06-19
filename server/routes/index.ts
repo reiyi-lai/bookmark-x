@@ -317,7 +317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let query = supabase
         .from('bookmarks')
-        .select(includeCount ? `${selectQuery}, count: exact` : selectQuery)
+        .select(selectQuery, { count: includeCount === 'true' ? 'exact' : undefined })
         .eq('user_id', userId);
 
       // Filter by category
