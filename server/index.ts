@@ -27,6 +27,7 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:3000',        // Server itself (for internal requests)
       'http://localhost:3001',        // Frontend dev server
+      'http://localhost:5173',        // Vite default dev server port
       'https://bookmark-x.info',      // Production frontend
       'https://www.bookmark-x.info',  // Production frontend (www subdomain)
       'chrome-extension://*'          // Chrome extension (wildcard)
@@ -98,18 +99,16 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // In development: setup Vite for local full-stack development  
+  // In development: API-only mode (client will be served by separate Vite dev server)
   // In production: Railway serves API only, Vercel serves frontend
   if (app.get("env") === "development") {
-    console.log('Setting up Vite for local development...');
-    await setupVite(app, server);
+    console.log('Development: API-only mode (client will be served by Vite dev server)');
   } else {
     console.log('Production: Railway serves API only, Vercel serves frontend');
-    // No static serving needed - Railway is API-only
   }
 
-  // Use Railway's PORT environment variable or fallback to 3000
-  const port = process.env.PORT || 3000;
+  // Use Railway's PORT environment variable or fallback to 3002 (to avoid conflicts with other services)
+  const port = process.env.PORT || 3001;
   console.log(`Starting server on port ${port}...`);
   server.listen(port, () => {
     log(`serving on port ${port}`);

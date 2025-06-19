@@ -6,7 +6,7 @@ const getApiUrl = () => {
   }
   
   // In development, use localhost
-  return 'http://localhost:3000';
+  return 'http://localhost:3001';
 };
 
 export const API_URL = getApiUrl();
