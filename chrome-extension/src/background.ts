@@ -1,9 +1,7 @@
 import type { ImportedBookmark } from '../../shared/schema';
+import config from './config';
 
 console.log('Bookmark-X background script loaded');
-
-const API_URL = 'https://bookmark-x-production.up.railway.app';
-const FRONTEND_URL = 'https://bookmark-x.info';
 
 // Twitter user info received from content script
 let twitterUser: { id: string; username: string } | null = null;
@@ -62,7 +60,7 @@ async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (re
     console.log(`Bookmark-X: Sending ${bookmarks.length} bookmarks to server...`);
     
     // Send to server for ML categorization and storage
-    const response = await fetch(`${API_URL}/api/bookmarks/import`, {
+    const response = await fetch(`${config.apiUrl}/api/bookmarks/import`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -108,7 +106,7 @@ async function completeInstallation() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab.id) {
     await chrome.tabs.update(tab.id, { 
-      url: `${FRONTEND_URL}?source=extension&twitter_id=${twitterUser!.id}`
+      url: `${config.frontendUrl}?source=extension&twitter_id=${twitterUser!.id}`
     });
   }
 }
