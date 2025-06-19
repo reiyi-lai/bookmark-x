@@ -1,12 +1,14 @@
 import { Card, CardContent, CardFooter } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
+import { Avatar, AvatarFallback } from "../ui/avatar";
+import { LazyImage } from "../ui/lazy-image";
 import type { ClientBookmark as Bookmark } from "@shared/schema";
 import { cleanTwitterHtml } from "@shared/utils";
 import { CalendarIcon, Tag, Trash2, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { useCategories } from "../../hooks/useCategories";
+import { memo, useMemo } from "react";
 
 interface BookmarkCardProps {
   bookmark: Bookmark;
@@ -14,7 +16,7 @@ interface BookmarkCardProps {
   onDelete: () => void;
 }
 
-export default function BookmarkCard({
+function BookmarkCard({
   bookmark,
   onChangeCategory,
   onDelete
@@ -24,23 +26,24 @@ export default function BookmarkCard({
   
   const formattedDate = format(new Date(bookmark.createdAt), "MMM d, yyyy");
   
-  const getCategoryName = () => {
-    if (!bookmark.categoryId) return 'Uncategorized';
-    const category = categories.find(c => c.id === bookmark.categoryId);
-    return category ? category.name : 'Uncategorized';
-  };
+  // Memoize category name lookup
+  const categoryName = !bookmark.categoryId 
+    ? 'Uncategorized' 
+    : categories.find(c => c.id === bookmark.categoryId)?.name || 'Uncategorized';
   
-  // Fallback for profile picture
-  const getInitials = (name: string) => {
+  // Fallback for profile picture - memoized to avoid recalculation
+  const initials = useMemo(() => {
+    const name = cleanTwitterHtml(bookmark.authorName || '');
     return name
       .split(" ")
       .map((part) => part[0])
       .join("")
       .toUpperCase()
       .substring(0, 2);
-  };
+  }, [bookmark.authorName]);
 
-  const getCategoryBadgeClass = () => {
+  // Memoize category badge class to avoid recalculation on each render
+  const categoryBadgeClass = useMemo(() => {
     if (!bookmark.categoryId) return 'bg-gray-500/10 text-gray-500';
     
     const categoryId = bookmark.categoryId;
@@ -61,7 +64,7 @@ export default function BookmarkCard({
       default:
         return 'bg-gray-500/10 text-gray-500';
     }
-  };
+  }, [bookmark.categoryId]);
 
   return (
     <Card className="overflow-hidden hover:shadow-md transition-shadow">
@@ -69,9 +72,13 @@ export default function BookmarkCard({
         <div className="flex items-start gap-3 mb-3">
           <Avatar className="h-10 w-10">
             {bookmark.authorProfileImage ? (
-              <AvatarImage src={bookmark.authorProfileImage} alt={bookmark.authorName || ''} />
+              <LazyImage 
+                src={bookmark.authorProfileImage} 
+                alt={bookmark.authorName || ''}
+                className="h-10 w-10 rounded-full object-cover"
+              />
             ) : (
-              <AvatarFallback>{getInitials(cleanTwitterHtml(bookmark.authorName || ''))}</AvatarFallback>
+              <AvatarFallback>{initials}</AvatarFallback>
             )}
           </Avatar>
           <div>
@@ -92,11 +99,11 @@ export default function BookmarkCard({
         <div className="flex items-center gap-2 flex-wrap flex-1">
           <Badge 
             variant="outline" 
-            className={`cursor-pointer ${getCategoryBadgeClass()}`}
+            className={`cursor-pointer ${categoryBadgeClass}`}
             onClick={onChangeCategory}
           >
             <Tag className="h-3 w-3 mr-1" />
-            <span className="truncate max-w-[100px]">{getCategoryName()}</span>
+            <span className="truncate max-w-[100px]">{categoryName}</span>
           </Badge>
         </div>
         
@@ -124,3 +131,12 @@ export default function BookmarkCard({
     </Card>
   );
 }
+
+export default memo(BookmarkCard, (prevProps, nextProps) => {
+  // Only re-render if these props change
+  return (
+    prevProps.bookmark.id === nextProps.bookmark.id &&
+    prevProps.bookmark.categoryId === nextProps.bookmark.categoryId &&
+    prevProps.bookmark.content === nextProps.bookmark.content
+  );
+});
