@@ -291,28 +291,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // 2. WEB APP ROUTES
   
-  // Get bookmarks with optional filtering
+  // Get bookmarks with optional filtering and pagination
   app.get("/api/bookmarks", async (req: Request, res: Response) => {
     try {
-      const { categoryId, search } = req.query;
+      const { categoryId, search, page = '1', limit = '20', includeCount = 'true' } = req.query;
       
-      // Get user ID from request
       const userId = await getUserFromRequest(req);
       if (!userId) {
         return res.status(401).json({ error: "User not authenticated" });
       }
       
+      const pageNum = parseInt(page as string);
+      const limitNum = parseInt(limit as string);
+      const startIndex = (pageNum - 1) * limitNum;
+      const endIndex = startIndex + limitNum - 1;
+      
+      const selectQuery = `
+        *,
+        categories (
+          id,
+          name,
+          color
+        )
+      `;
+      
       let query = supabase
         .from('bookmarks')
-        .select(`
-          *,
-          categories (
-            id,
-            name,
-            color
-          )
-        `)
-        .eq('user_id', userId); // CRITICAL FIX: Filter by user_id
+        .select(includeCount ? `${selectQuery}, count: exact` : selectQuery)
+        .eq('user_id', userId);
 
       // Filter by category
       if (categoryId) {
@@ -323,29 +329,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (search) {
         query = query.or(`tweet_content.ilike.%${search}%,author_display_name.ilike.%${search}%,author_username.ilike.%${search}%`);
       }
+      
+      // Add pagination if not requesting all bookmarks
+      if (limitNum > 0) {
+        query = query.range(startIndex, endIndex);
+      }
 
-      const { data: bookmarks, error } = await query;
+      // Sort by most recent first
+      query = query.order('created_at', { ascending: false });
+
+      const { data: bookmarks, error, count } = await query;
       
       if (error) {
         throw error;
       }
       
       // Match client Bookmark interface
-      const transformedBookmarks = bookmarks?.map(bookmark => ({
-        id: bookmark.id,
-        content: bookmark.tweet_content,
-        url: bookmark.tweet_url,
-        userId: bookmark.user_id,
-        categoryId: bookmark.category_id,
-        tweetId: bookmark.tweet_id,
-        authorName: bookmark.author_display_name,
-        authorUsername: bookmark.author_username,
-        authorProfileImage: bookmark.author_profile_picture,
-        createdAt: new Date(bookmark.tweet_date),
-        bookmarkedAt: new Date(bookmark.created_at)
-      })) || [];
+      const transformedBookmarks = bookmarks?.map((bookmark: any) => {
+        if (bookmark && typeof bookmark === 'object') {
+          return {
+            id: bookmark.id,
+            content: bookmark.tweet_content,
+            url: bookmark.tweet_url,
+            userId: bookmark.user_id,
+            categoryId: bookmark.category_id,
+            tweetId: bookmark.tweet_id,
+            authorName: bookmark.author_display_name,
+            authorUsername: bookmark.author_username,
+            authorProfileImage: bookmark.author_profile_picture,
+            createdAt: new Date(bookmark.tweet_date),
+            bookmarkedAt: new Date(bookmark.created_at)
+          };
+        }
+        return null;
+      }).filter(Boolean) || [];
 
-      res.json(transformedBookmarks);
+      res.setHeader('Cache-Control', 'public, max-age=60'); // Cache for 1 minute
+      res.json({
+        bookmarks: transformedBookmarks,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: count || 0
+        }
+      });
     } catch (error) {
       console.error("Error fetching bookmarks:", error);
       res.status(500).json({ error: "Failed to fetch bookmarks" });
