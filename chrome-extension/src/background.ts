@@ -2,8 +2,17 @@ import type { ImportedBookmark } from '../../shared/schema';
 
 console.log('Bookmark-X background script loaded');
 
-const API_URL = 'https://bookmark-x-production.up.railway.app';
-const FRONTEND_URL = 'https://bookmark-x.info';
+// Manual environment configuration - set this to false for production
+const isDevelopment = false;
+
+// Configure URLs based on environment
+const API_URL = isDevelopment 
+  ? 'http://localhost:3000'  // Development: local server
+  : 'https://bookmark-x-production.up.railway.app';  // Production: Railway
+
+const FRONTEND_URL = isDevelopment 
+  ? 'http://localhost:3001'  // Development: local Vite dev server  
+  : 'https://bookmark-x.info';  // Production: Vercel
 
 // Twitter user info received from content script
 let twitterUser: { id: string; username: string } | null = null;

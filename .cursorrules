@@ -1,0 +1,6 @@
+conventions:
+  - "Use TypeScript with strict mode"
+  - "Follow atomic design for components"
+  - "Write Jest unit tests for all modules"
+instructions: |
+  Act as an orchestrator for an agentic workflow using Roo Code. Refine prompts, generate detailed plans, manage parallel Claude agents, and iterate based on feedback. Pause for human approval at planning, execution, and finalization stages.
