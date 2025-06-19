@@ -1,14 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import Sidebar from "../components/layout/Sidebar";
 import MainContent from "../components/layout/MainContent";
 import { useCategories } from "../hooks/useCategories";
 import { useBookmarks } from "../hooks/useBookmarks";
+import { useDebounce } from "../hooks/useDebounce";
 import CategoryModal from "../components/bookmarks/CategoryModal";
 import type { Category } from "@shared/schema";
 
 export default function Home() {
   const [showSidebar, setShowSidebar] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchInputValue, setSearchInputValue] = useState("");
+  // Debounce search query to reduce API calls
+  const debouncedSearchQuery = useDebounce(searchInputValue, 500); // 500ms delay
   
   const { 
     categories,
@@ -24,7 +27,6 @@ export default function Home() {
   // Bookmarks management
   const {
     bookmarks,
-    allBookmarks,
     isLoading: bookmarksLoading,
     syncBookmarks,
     updateCategory,
@@ -34,20 +36,21 @@ export default function Home() {
     categoryModalOpen,
     openCategoryModal,
     closeModal
-  } = useBookmarks(selectedCategoryId, searchQuery);
+  } = useBookmarks(selectedCategoryId, debouncedSearchQuery);
 
   const isLoading = categoriesLoading || bookmarksLoading;
 
-  const categoryCount = allBookmarks.reduce((acc, bookmark) => {
-    const categoryId = bookmark.categoryId || 0;
-    acc[categoryId] = (acc[categoryId] || 0) + 1;
+  // Build category count map
+  const categoryCount = categories.reduce((acc, category) => {
+    // Use a default of 0 for each category
+    acc[category.id] = 0;
     return acc;
   }, {} as Record<number, number>);
 
-  // Handle search input change
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-  };
+  // Handle search input change - memoized with useCallback
+  const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchInputValue(e.target.value);
+  }, []);
 
   return (
     <div className="flex h-screen bg-background">
@@ -67,10 +70,10 @@ export default function Home() {
         openSidebar={() => setShowSidebar(true)}
         selectedCategory={selectedCategory}
         handleSearch={handleSearch}
-        searchQuery={searchQuery}
+        searchQuery={searchInputValue}
         syncBookmarks={syncBookmarks}
         openCategoryModal={openCategoryModal}
-        deleteBookmark={deleteBookmark}
+        deleteBookmark={(id: string) => deleteBookmark(Number(id))}
       />
 
       {selectedBookmark && (
@@ -80,7 +83,7 @@ export default function Home() {
           categories={categories}
           selectedBookmark={selectedBookmark}
           onSelectCategory={(categoryId) =>
-            updateCategory({ bookmarkId: selectedBookmark.id, categoryId })
+            updateCategory({ bookmarkId: Number(selectedBookmark.id), categoryId })
           }
           isUpdating={isUpdatingCategory}
         />
