@@ -291,87 +291,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // 2. WEB APP ROUTES
   
-  // Get bookmarks with optional filtering and pagination
+  // Get bookmarks with optional filtering and category counts
   app.get("/api/bookmarks", async (req: Request, res: Response) => {
     try {
-      const { categoryId, search, page = '1', limit = '20', includeCount = 'true' } = req.query;
-      
+      const { categoryId } = req.query;
       const userId = await getUserFromRequest(req);
       if (!userId) {
         return res.status(401).json({ error: "User not authenticated" });
       }
       
-      const pageNum = parseInt(page as string);
-      const limitNum = parseInt(limit as string);
-      const startIndex = (pageNum - 1) * limitNum;
-      const endIndex = startIndex + limitNum - 1;
-      
-      const selectQuery = `
-        *,
-        categories (
-          id,
-          name,
-          color
-        )
-      `;
-      
       let query = supabase
         .from('bookmarks')
-        .select(selectQuery, { count: includeCount === 'true' ? 'exact' : undefined })
+        .select(`
+          *,
+          categories (
+            id,
+            name,
+            color
+          )
+        `)
         .eq('user_id', userId);
 
-      // Filter by category
-      if (categoryId) {
-        query = query.eq('category_id', parseInt(categoryId as string));
+      // Apply category filter
+      if (categoryId && categoryId !== '0') {
+        query = query.eq('category_id', categoryId);
       }
 
-      // Filter by search
-      if (search) {
-        query = query.or(`tweet_content.ilike.%${search}%,author_display_name.ilike.%${search}%,author_username.ilike.%${search}%`);
-      }
-      
-      // Add pagination if not requesting all bookmarks
-      if (limitNum > 0) {
-        query = query.range(startIndex, endIndex);
-      }
+      // Search filter logic handled on client side
 
-      // Sort by most recent first
-      query = query.order('created_at', { ascending: false });
+      const { data: bookmarksData, error } = await query;
 
-      const { data: bookmarks, error, count } = await query;
-      
       if (error) {
-        throw error;
+        console.error("Supabase error:", error);
+        return res.status(500).json({ error: "Database error" });
+      }
+
+      // Get all bookmarks for this user (without filters) to count by category
+      const { data: allUserBookmarks, error: allBookmarksError } = await supabase
+        .from('bookmarks')
+        .select('category_id')
+        .eq('user_id', userId);
+        
+      if (allBookmarksError) {
+        console.error("Error fetching all bookmarks for counting:", allBookmarksError);
+        return res.status(500).json({ error: "Database error getting category counts" });
       }
       
-      // Match client Bookmark interface
-      const transformedBookmarks = bookmarks?.map((bookmark: any) => {
-        if (bookmark && typeof bookmark === 'object') {
-          return {
-            id: bookmark.id,
-            content: bookmark.tweet_content,
-            url: bookmark.tweet_url,
-            userId: bookmark.user_id,
-            categoryId: bookmark.category_id,
-            tweetId: bookmark.tweet_id,
-            authorName: bookmark.author_display_name,
-            authorUsername: bookmark.author_username,
-            authorProfileImage: bookmark.author_profile_picture,
-            createdAt: new Date(bookmark.tweet_date),
-            bookmarkedAt: new Date(bookmark.created_at)
-          };
-        }
-        return null;
-      }).filter(Boolean) || [];
+      // Count bookmarks by category on the server side
+      const categoryCountsMap: Record<number, number> = {};
+      allUserBookmarks?.forEach(bookmark => {
+        const categoryId = bookmark.category_id;
+        categoryCountsMap[categoryId] = (categoryCountsMap[categoryId] || 0) + 1;
+      });
 
-      res.setHeader('Cache-Control', 'public, max-age=60'); // Cache for 1 minute
+      // Transform the bookmarks data to match the client interface
+      const transformedBookmarks = bookmarksData?.map(bookmark => {
+        return {
+          id: bookmark.id,
+          tweetUrl: bookmark.tweet_url,
+          content: bookmark.tweet_content,
+          categoryId: bookmark.category_id,
+          tweetId: bookmark.tweet_id,
+          authorName: bookmark.author_display_name,
+          authorUsername: bookmark.author_username,
+          authorProfileImage: bookmark.author_profile_picture,
+          createdAt: new Date(bookmark.tweet_date),
+          bookmarkedAt: new Date(bookmark.created_at)
+        };
+      }) || [];
+      
+      // Return both the filtered bookmarks and category counts
       res.json({
         bookmarks: transformedBookmarks,
-        pagination: {
-          page: pageNum,
-          limit: limitNum,
-          total: count || 0
-        }
+        categoryCounts: categoryCountsMap
       });
     } catch (error) {
       console.error("Error fetching bookmarks:", error);
