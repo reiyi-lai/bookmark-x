@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import Sidebar from "../components/layout/Sidebar";
 import MainContent from "../components/layout/MainContent";
 import { useCategories } from "../hooks/useCategories";
@@ -46,12 +46,27 @@ export default function Home() {
     setSearchInputValue(e.target.value);
   }, []);
 
+  // Optimize category switching by scrolling to top
+  useEffect(() => {
+    // When category changes, scroll to top for better UX
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [selectedCategoryId]);
+
+  // Handle category selection with optimized UX
+  const handleCategorySelect = useCallback((categoryId: number) => {
+    // If on mobile, close the sidebar after category selection
+    if (window.innerWidth < 768) {
+      setShowSidebar(false);
+    }
+    setSelectedCategoryId(categoryId);
+  }, []);
+
   return (
     <div className="flex h-screen bg-background">
       <Sidebar 
         categories={categories as Category[]}
         selectedCategoryId={selectedCategoryId || 0}
-        selectCategory={setSelectedCategoryId}
+        selectCategory={handleCategorySelect}
         showSidebar={showSidebar}
         closeSidebar={() => setShowSidebar(false)}
         categoryCounts={categoryCounts}
