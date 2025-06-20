@@ -1,6 +1,29 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { API_URL } from "./config";
 
+function getAuthHeaders(includeContentType = false, data?: unknown): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (includeContentType && data) {
+    headers["Content-Type"] = "application/json";
+  }
+  const twitterId = localStorage.getItem('twitter_user_id');
+  if (twitterId) {
+    headers["x-twitter-id"] = twitterId;
+  }
+  
+  return headers;
+}
+
+// Extract error message from API response
+async function handleErrorResponse(res: Response): Promise<string> {
+  try {
+    const data = await res.json();
+    return data.message || data.error;
+  } catch {
+    return res.statusText;
+  }
+}
+
 export async function apiRequest<T = any>(
   options: {
     endpoint: string;
@@ -9,23 +32,11 @@ export async function apiRequest<T = any>(
     on401: "returnNull" | "throw";
   }
 ): Promise<T> {
-  const { endpoint, method, data } = options;
+  const { endpoint, method, data, on401 } = options;
   
   // Construct full URL - if endpoint already has protocol, use as is, otherwise prepend API_URL
   const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
-  
-  // Get twitter_id from sessionStorage for authentication
-  const twitterId = sessionStorage.getItem('twitter_user_id');
-  const headers: Record<string, string> = {};
-  
-  if (data) {
-    headers["Content-Type"] = "application/json";
-  }
-  
-  // Add authentication header if available
-  if (twitterId) {
-    headers["x-twitter-id"] = twitterId;
-  }
+  const headers = getAuthHeaders(true, data);
   
   const res = await fetch(url, {
     method,
@@ -34,34 +45,12 @@ export async function apiRequest<T = any>(
     credentials: "include",
   });
 
-  if (options.on401 === "returnNull" && res.status === 401) {
+  if (on401 === "returnNull" && res.status === 401) {
     return null as T;
   }
 
-  // Handle error responses
   if (!res.ok) {
-    let errorMessage = res.statusText;
-    
-    try {
-      // Try to parse JSON error response
-      const errorData = await res.json();
-      if (errorData.message) {
-        errorMessage = errorData.message;
-      } else if (errorData.error) {
-        errorMessage = errorData.error;
-      }
-    } catch (e) {
-      // If not JSON, fall back to text
-      try {
-        const text = await res.text();
-        if (text) {
-          errorMessage = text;
-        }
-      } catch (textError) {
-        // Keep the statusText if everything else fails
-      }
-    }
-    
+    const errorMessage = await handleErrorResponse(res);
     const error = new Error(errorMessage);
     // @ts-ignore - Add status code to error for debugging
     error.status = res.status;
@@ -77,18 +66,9 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    // Construct full URL - if queryKey already has protocol, use as is, otherwise prepend API_URL
     const endpoint = queryKey[0] as string;
     const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
-    
-    // Get twitter_id from sessionStorage for authentication
-    const twitterId = sessionStorage.getItem('twitter_user_id');
-    const headers: Record<string, string> = {};
-    
-    // Add authentication header if available
-    if (twitterId) {
-      headers["x-twitter-id"] = twitterId;
-    }
+    const headers = getAuthHeaders();
     
     const res = await fetch(url, {
       headers,
@@ -99,30 +79,8 @@ export const getQueryFn: <T>(options: {
       return null;
     }
 
-    // Handle error responses
     if (!res.ok) {
-      let errorMessage = res.statusText;
-      
-      try {
-        // Try to parse JSON error response
-        const errorData = await res.json();
-        if (errorData.message) {
-          errorMessage = errorData.message;
-        } else if (errorData.error) {
-          errorMessage = errorData.error;
-        }
-      } catch (e) {
-        // If not JSON, fall back to text
-        try {
-          const text = await res.text();
-          if (text) {
-            errorMessage = text;
-          }
-        } catch (textError) {
-          // Keep the statusText if everything else fails
-        }
-      }
-      
+      const errorMessage = await handleErrorResponse(res);
       const error = new Error(errorMessage);
       // @ts-ignore - Add status code to error for debugging
       error.status = res.status;
