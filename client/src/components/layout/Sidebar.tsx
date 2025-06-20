@@ -7,9 +7,8 @@ import { Label } from "../ui/label";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { getMaterialIcon } from "../../utils/categoryIcons";
-import { X, Moon, LogOut, Shield } from "lucide-react";
+import { X, Moon, LogOut } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
-import { Link } from "wouter";
 
 interface SidebarProps {
   categories: Category[];
@@ -17,7 +16,7 @@ interface SidebarProps {
   selectCategory: (id: number) => void;
   showSidebar: boolean;
   closeSidebar: () => void;
-  categoryCount: Record<number, number>;
+  categoryCounts: Record<number, number>;
   isLoading: boolean;
 }
 
@@ -27,7 +26,7 @@ export default function Sidebar({
   selectCategory,
   showSidebar,
   closeSidebar,
-  categoryCount,
+  categoryCounts,
   isLoading
 }: SidebarProps) {
   const { theme, toggleTheme } = useTheme();
@@ -91,7 +90,7 @@ export default function Sidebar({
                 <span className="text-gray-500 dark:text-gray-400 mr-2 flex items-center">{getMaterialIcon("widgets")}</span>
                 All Bookmarks
                 <span className="ml-auto bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full px-2 py-0.5">
-                  {Object.values(categoryCount).reduce((sum, count) => sum + count, 0)}
+                  {Object.values(categoryCounts).reduce((sum: number, count: number) => sum + count, 0)}
                 </span>
               </Button>
 
@@ -123,7 +122,7 @@ export default function Sidebar({
                   </span>
                   {category.name}
                   <span className="ml-auto bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full px-2 py-0.5">
-                    {categoryCount[category.id] || 0}
+                    {categoryCounts[category.id] || 0}
                   </span>
                 </Button>
               ))}
