@@ -62,7 +62,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex min-h-screen bg-background">
       <Sidebar 
         categories={categories as Category[]}
         selectedCategoryId={selectedCategoryId || 0}
