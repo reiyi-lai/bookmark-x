@@ -27,6 +27,7 @@ export default function Home() {
   // Bookmarks management
   const {
     bookmarks,
+    categoryCounts,
     isLoading: bookmarksLoading,
     syncBookmarks,
     updateCategory,
@@ -39,14 +40,7 @@ export default function Home() {
   } = useBookmarks(selectedCategoryId, debouncedSearchQuery);
 
   const isLoading = categoriesLoading || bookmarksLoading;
-
-  // Build category count map
-  const categoryCount = categories.reduce((acc, category) => {
-    // Use a default of 0 for each category
-    acc[category.id] = 0;
-    return acc;
-  }, {} as Record<number, number>);
-
+  
   // Handle search input change - memoized with useCallback
   const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchInputValue(e.target.value);
@@ -60,7 +54,7 @@ export default function Home() {
         selectCategory={setSelectedCategoryId}
         showSidebar={showSidebar}
         closeSidebar={() => setShowSidebar(false)}
-        categoryCount={categoryCount}
+        categoryCounts={categoryCounts}
         isLoading={isLoading}
       />
 
@@ -73,7 +67,8 @@ export default function Home() {
         searchQuery={searchInputValue}
         syncBookmarks={syncBookmarks}
         openCategoryModal={openCategoryModal}
-        deleteBookmark={(id: string) => deleteBookmark(Number(id))}
+        deleteBookmark={deleteBookmark}
+        categoryCounts={categoryCounts}
       />
 
       {selectedBookmark && (
@@ -83,7 +78,7 @@ export default function Home() {
           categories={categories}
           selectedBookmark={selectedBookmark}
           onSelectCategory={(categoryId) =>
-            updateCategory({ bookmarkId: Number(selectedBookmark.id), categoryId })
+            updateCategory({ bookmarkId: selectedBookmark.id.toString(), categoryId })
           }
           isUpdating={isUpdatingCategory}
         />
