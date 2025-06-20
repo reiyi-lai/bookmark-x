@@ -185,9 +185,9 @@ async function collectWithNewTurboMethod(
             onTweetCollected(tweet, tweetMap.size);
           }
 
-          if (tweetMap.size >= 300) {
+          if (tweetMap.size >= 100) {
             const totalTime = (Date.now() - startTime) / 1000;
-            console.log(`Bookmark-X: Reached temporary 300 tweet test limit in ${totalTime} seconds`);
+            // console.log(`Bookmark-X: Reached temporary 300 tweet test limit in ${totalTime} seconds`);
             return Array.from(tweetMap.values());
           }
 
