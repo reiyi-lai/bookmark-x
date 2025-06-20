@@ -15,6 +15,7 @@ interface MainContentProps {
   syncBookmarks: () => void;
   openCategoryModal: (bookmark: Bookmark) => void;
   deleteBookmark: (id: string) => void;
+  categoryCounts: Record<number, number>;
 }
 
 export default function MainContent({
@@ -26,8 +27,13 @@ export default function MainContent({
   searchQuery,
   syncBookmarks,
   openCategoryModal,
-  deleteBookmark
+  deleteBookmark,
+  categoryCounts
 }: MainContentProps) {
+  const totalCategoryCount = selectedCategory 
+    ? categoryCounts[selectedCategory.id] || 0
+    : Object.values(categoryCounts).reduce((sum: number, count: number) => sum + count, 0);
+    
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header with search and actions */}
@@ -45,7 +51,10 @@ export default function MainContent({
           <h1 className="text-xl font-semibold">
             {selectedCategory ? selectedCategory.name : 'All Bookmarks'}
             <span className="ml-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded-full px-3 py-1">
-              {bookmarks.length}
+              {searchQuery 
+                ? `${bookmarks.length}` // Filtered count when searching
+                : totalCategoryCount
+              }
             </span>
           </h1>
             </div>
