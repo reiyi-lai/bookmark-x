@@ -10,22 +10,16 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
   const [selectedBookmark, setSelectedBookmark] = useState<Bookmark | null>(null);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
 
-  // Construct the query params
-  const queryParams = new URLSearchParams();
-  if (categoryId) {
-    queryParams.append("categoryId", categoryId.toString());
-  }
-
-  // Fetch bookmarks with a single query that includes category counts
+  // Fetch all bookmarks with data that includes category counts
   const {
     data: bookmarksData = { bookmarks: [], categoryCounts: {} },
     isLoading,
     isError,
     refetch
   } = useQuery({
-    queryKey: ["/api/bookmarks", categoryId],
+    queryKey: ["/api/bookmarks"],
     queryFn: async () => {
-      const endpoint = `/api/bookmarks?${queryParams.toString()}`;
+      const endpoint = `/api/bookmarks`;
       try {
         const response = await apiRequest<{ bookmarks: Bookmark[], categoryCounts: Record<number, number> }>({
           endpoint,
@@ -43,23 +37,31 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
         throw error;
       }
     },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
   
-  // Apply search filtering
+  // Apply category filtering on the client side
+  const categoryFilteredBookmarks = useMemo(() => {
+    const allBookmarks = bookmarksData?.bookmarks || [];
+    if (!categoryId) return allBookmarks;
+    return allBookmarks.filter(bookmark => bookmark.categoryId === categoryId);
+  }, [bookmarksData?.bookmarks, categoryId]);
+  
+  // Apply search filtering on category-filtered bookmarks
   const filteredBookmarks = useMemo(() => {
     if (!searchQuery || searchQuery.trim() === '') {
-      return bookmarksData?.bookmarks || [];
+      return categoryFilteredBookmarks;
     }
     
     const query = searchQuery.toLowerCase().trim();
-    return (bookmarksData?.bookmarks || []).filter(bookmark => {
+    return categoryFilteredBookmarks.filter(bookmark => {
       return (
         bookmark.content?.toLowerCase().includes(query) ||
         bookmark.authorName?.toLowerCase().includes(query) ||
         bookmark.authorUsername?.toLowerCase().includes(query)
       );
     });
-  }, [bookmarksData?.bookmarks, searchQuery]);
+  }, [categoryFilteredBookmarks, searchQuery]);
   
   const categoryCounts = bookmarksData?.categoryCounts || {};
 
