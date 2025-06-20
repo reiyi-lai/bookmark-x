@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { ClientBookmark as Bookmark } from "@shared/schema";
 import BookmarkCard from "./BookmarkCard";
 import { Skeleton } from "../ui/skeleton";
@@ -19,13 +19,33 @@ export default function BookmarksGrid({
   // Local state to track deleted bookmarks (frontend only)
   const [deletedBookmarkIds, setDeletedBookmarkIds] = useState<Set<string>>(new Set());
 
-  // Filter out locally deleted bookmarks
-  const visibleBookmarks = bookmarks.filter(bookmark => !deletedBookmarkIds.has(bookmark.id));
+  // Filter out locally deleted bookmarks - memoize this to avoid recalculation on every render
+  const visibleBookmarks = useMemo(() => {
+    return bookmarks.filter(bookmark => !deletedBookmarkIds.has(bookmark.id));
+  }, [bookmarks, deletedBookmarkIds]);
 
   // Handle local deletion
   const handleLocalDelete = (bookmarkId: string) => {
     setDeletedBookmarkIds(prev => new Set([...prev, bookmarkId]));
   };
+
+  // Create memoized callbacks for each bookmark to prevent unnecessary re-renders
+  const changeCallbacks = useMemo(() => {
+    const callbacks: Record<string, () => void> = {};
+    visibleBookmarks.forEach(bookmark => {
+      callbacks[bookmark.id] = () => onChangeCategory(bookmark);
+    });
+    return callbacks;
+  }, [visibleBookmarks, onChangeCategory]);
+
+  // Create memoized delete callbacks
+  const deleteCallbacks = useMemo(() => {
+    const callbacks: Record<string, () => void> = {};
+    visibleBookmarks.forEach(bookmark => {
+      callbacks[bookmark.id] = () => handleLocalDelete(bookmark.id);
+    });
+    return callbacks;
+  }, [visibleBookmarks]);
 
   if (isLoading) {
     return (
@@ -90,8 +110,8 @@ export default function BookmarksGrid({
         <BookmarkCard
           key={bookmark.id}
           bookmark={bookmark}
-          onChangeCategory={() => onChangeCategory(bookmark)}
-          onDelete={() => handleLocalDelete(bookmark.id)}
+          onChangeCategory={changeCallbacks[bookmark.id]}
+          onDelete={deleteCallbacks[bookmark.id]}
         />
       ))}
     </div>

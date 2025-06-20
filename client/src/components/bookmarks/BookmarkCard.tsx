@@ -2,7 +2,6 @@ import { Card, CardContent, CardFooter } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback } from "../ui/avatar";
-import { LazyImage } from "../ui/lazy-image";
 import type { ClientBookmark as Bookmark } from "@shared/schema";
 import { cleanTwitterHtml } from "@shared/utils";
 import { CalendarIcon, Tag, Trash2, ExternalLink } from "lucide-react";
@@ -24,12 +23,17 @@ function BookmarkCard({
   // Get categories data
   const { categories } = useCategories();
   
-  const formattedDate = format(new Date(bookmark.createdAt), "MMM d, yyyy");
+  // Memoize formatted date to avoid recalculation
+  const formattedDate = useMemo(() => {
+    return format(new Date(bookmark.createdAt), "MMM d, yyyy");
+  }, [bookmark.createdAt]);
   
   // Memoize category name lookup
-  const categoryName = !bookmark.categoryId 
-    ? 'Uncategorized' 
-    : categories.find(c => c.id === bookmark.categoryId)?.name || 'Uncategorized';
+  const categoryName = useMemo(() => {
+    return !bookmark.categoryId 
+      ? 'Uncategorized' 
+      : categories.find(c => c.id === bookmark.categoryId)?.name || 'Uncategorized';
+  }, [bookmark.categoryId, categories]);
   
   // Fallback for profile picture - memoized to avoid recalculation
   const initials = useMemo(() => {
@@ -66,13 +70,18 @@ function BookmarkCard({
     }
   }, [bookmark.categoryId]);
 
+  // Memoize cleaned author name
+  const cleanedAuthorName = useMemo(() => {
+    return cleanTwitterHtml(bookmark.authorName || '');
+  }, [bookmark.authorName]);
+
   return (
     <Card className="overflow-hidden hover:shadow-md transition-shadow">
       <CardContent className="p-4">
         <div className="flex items-start gap-3 mb-3">
           <Avatar className="h-10 w-10">
             {bookmark.authorProfileImage ? (
-              <LazyImage 
+              <img 
                 src={bookmark.authorProfileImage} 
                 alt={bookmark.authorName || ''}
                 className="h-10 w-10 rounded-full object-cover"
@@ -82,7 +91,7 @@ function BookmarkCard({
             )}
           </Avatar>
           <div>
-            <h3 className="font-semibold">{cleanTwitterHtml(bookmark.authorName || '')}</h3>
+            <h3 className="font-semibold">{cleanedAuthorName}</h3>
             <p className="text-sm text-muted-foreground">@{bookmark.authorUsername || ''}</p>
           </div>
         </div>
@@ -132,11 +141,16 @@ function BookmarkCard({
   );
 }
 
+// Improve memoization to prevent unnecessary re-renders
 export default memo(BookmarkCard, (prevProps, nextProps) => {
   // Only re-render if these props change
   return (
     prevProps.bookmark.id === nextProps.bookmark.id &&
     prevProps.bookmark.categoryId === nextProps.bookmark.categoryId &&
-    prevProps.bookmark.content === nextProps.bookmark.content
+    prevProps.bookmark.content === nextProps.bookmark.content &&
+    prevProps.bookmark.authorName === nextProps.bookmark.authorName &&
+    prevProps.bookmark.authorUsername === nextProps.bookmark.authorUsername &&
+    prevProps.bookmark.authorProfileImage === nextProps.bookmark.authorProfileImage &&
+    prevProps.bookmark.createdAt === nextProps.bookmark.createdAt
   );
 });

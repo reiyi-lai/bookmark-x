@@ -43,7 +43,11 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
   // Apply category filtering on the client side
   const categoryFilteredBookmarks = useMemo(() => {
     const allBookmarks = bookmarksData?.bookmarks || [];
-    if (!categoryId) return allBookmarks;
+    
+    // If no category selected or categoryId is 0 (All bookmarks), return all bookmarks
+    if (!categoryId || categoryId === 0) return allBookmarks;
+    
+    // Otherwise filter by the selected category
     return allBookmarks.filter(bookmark => bookmark.categoryId === categoryId);
   }, [bookmarksData?.bookmarks, categoryId]);
   
@@ -147,32 +151,6 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
     },
   });
 
-  // Recategorize all bookmarks
-  // const { mutate: recategorizeBookmarks, isPending: isRecategorizing } = useMutation({
-  //   mutationFn: async () => {
-  //     return apiRequest({
-  //       endpoint: "/api/bookmarks/recategorize",
-  //       method: "POST",
-  //       on401: "throw",
-  //     });
-  //   },
-  //   onSuccess: (data) => {
-  //     queryClient.invalidateQueries({ queryKey: ["/api/bookmarks"] });
-  //     toast({
-  //       title: "Success",
-  //       description: `Recategorized ${data.stats?.updated || 0} bookmarks`,
-  //     });
-  //   },
-  //   onError: (error: Error) => {
-  //     console.error("Error recategorizing bookmarks:", error);
-  //     toast({
-  //       title: "Error",
-  //       description: "Failed to recategorize bookmarks. Please try again.",
-  //       variant: "destructive",
-  //     });
-  //   },
-  // });
-
   const openCategoryModal = useCallback((bookmark: Bookmark) => {
     setSelectedBookmark(bookmark);
     setCategoryModalOpen(true);
@@ -193,8 +171,6 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
     isDeleting,
     updateCategory,
     isUpdatingCategory,
-    // recategorizeBookmarks,
-    // isRecategorizing,
     selectedBookmark,
     categoryModalOpen,
     openCategoryModal,
