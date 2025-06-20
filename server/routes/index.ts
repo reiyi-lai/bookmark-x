@@ -294,30 +294,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get bookmarks with optional filtering and category counts
   app.get("/api/bookmarks", async (req: Request, res: Response) => {
     try {
-      const { categoryId } = req.query;
       const userId = await getUserFromRequest(req);
       if (!userId) {
         return res.status(401).json({ error: "User not authenticated" });
       }
       
+      // Base query - category and search filtering handled on client side
       let query = supabase
         .from('bookmarks')
         .select(`
-          *,
-          categories (
-            id,
-            name,
-            color
-          )
+          id,
+          tweet_id,
+          tweet_url,
+          tweet_content,
+          category_id,
+          author_username,
+          author_display_name,
+          author_profile_picture,
+          tweet_date,
+          created_at
         `)
-        .eq('user_id', userId);
-
-      // Apply category filter
-      if (categoryId && categoryId !== '0') {
-        query = query.eq('category_id', categoryId);
-      }
-
-      // Search filter logic handled on client side
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false }); // Order by most recent
 
       const { data: bookmarksData, error } = await query;
 
@@ -348,7 +346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const transformedBookmarks = bookmarksData?.map(bookmark => {
         return {
           id: bookmark.id,
-          tweetUrl: bookmark.tweet_url,
+          url: bookmark.tweet_url,
           content: bookmark.tweet_content,
           categoryId: bookmark.category_id,
           tweetId: bookmark.tweet_id,
