@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import type { ClientBookmark as Bookmark, Category } from "@shared/schema";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -30,14 +30,36 @@ export default function MainContent({
   deleteBookmark,
   categoryCounts
 }: MainContentProps) {
+  const [prevScrollPos, setPrevScrollPos] = useState(0);
+  const [visible, setVisible] = useState(true);
+  
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollPos = window.scrollY;
+      
+      // Make header visible when scrolling up or at the top
+      const isVisible = prevScrollPos > currentScrollPos || currentScrollPos < 10;
+      
+      setPrevScrollPos(currentScrollPos);
+      setVisible(isVisible);
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [prevScrollPos]);
+
   const totalCategoryCount = selectedCategory 
     ? categoryCounts[selectedCategory.id] || 0
     : Object.values(categoryCounts).reduce((sum: number, count: number) => sum + count, 0);
     
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col ml-0 lg:ml-64">
       {/* Header with search and actions */}
-      <header className="border-b p-4 flex items-center justify-between gap-2 bg-background">
+      <header 
+        className={`border-b p-4 flex items-center justify-between gap-2 bg-background sticky top-0 z-20 transition-transform duration-300 ${
+          visible ? 'translate-y-0' : '-translate-y-full'
+        }`}
+      >
         <div className="flex items-center gap-2">
               <Button
                 variant="outline"
