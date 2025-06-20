@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const getCurrentUser = useCallback(async (): Promise<User | null> => {
     try {
-      const twitterId = sessionStorage.getItem('twitter_user_id');
+      const twitterId = localStorage.getItem('twitter_user_id');
       
       if (!twitterId) {
         return null;
@@ -161,8 +161,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [state.twitterAuth.isAuthenticated, state.appAuth.isAuthenticated]);
 
   const logout = useCallback(async (): Promise<void> => {
-    sessionStorage.removeItem('twitter_user_id');
-    sessionStorage.removeItem('twitter_username');
+    localStorage.removeItem('twitter_user_id');
     setState({
       twitterAuth: {
         isAuthenticated: false,
@@ -187,12 +186,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const twitterId = urlParams.get('twitter_id');
         
         if (isFromExtension && twitterId) {
-          // Clean up URL and store Twitter ID in sessionStorage for getCurrentUser to use
+          // Clean up URL and store Twitter ID in localStorage for getCurrentUser to use
           window.history.replaceState({}, '', window.location.pathname);
-          sessionStorage.setItem('twitter_user_id', twitterId);
+          localStorage.setItem('twitter_user_id', twitterId);
         }
         
-        // Simply get user - this handles both sessionStorage check and database lookup
+        // Get user - handles both localStorage check and database lookup
         const user = await getCurrentUser();
         
         setState(prev => ({

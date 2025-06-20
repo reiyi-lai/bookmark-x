@@ -37,10 +37,9 @@ export function EmailSignupHandler() {
           // Double-check user exists before showing modal
           const user = await getCurrentUser();
           if (!user) {
-            // User was deleted from database - clear sessionStorage and reset auth
+            // User was deleted from database - clear localStorage and reset auth
             console.warn('User not found in database. Clearing session.');
-            sessionStorage.removeItem('twitter_user_id');
-            sessionStorage.removeItem('twitter_username');
+            localStorage.removeItem('twitter_user_id');
             setState((prev) => ({
               ...prev,
               twitterAuth: {
