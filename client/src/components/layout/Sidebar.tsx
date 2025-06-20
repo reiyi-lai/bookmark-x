@@ -36,7 +36,7 @@ export default function Sidebar({
     <aside
       className={`${
         showSidebar ? "translate-x-0" : "-translate-x-full"
-      } w-64 bg-white dark:bg-gray-900 h-screen border-r border-gray-200 dark:border-gray-800 transition-transform duration-300 ease-in-out fixed lg:static z-30`}
+      } w-64 bg-white dark:bg-gray-900 h-screen border-r border-gray-200 dark:border-gray-800 transition-transform duration-300 ease-in-out fixed z-30`}
     >
       <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center">
         <h1 className="text-2xl font-bold text-foreground flex items-center flex-1 min-w-0">
