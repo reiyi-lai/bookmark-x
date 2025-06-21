@@ -23,7 +23,9 @@ function BookmarkCard({
   // State for expanded content
   const [isExpanded, setIsExpanded] = useState(false);
   const [needsExpansion, setNeedsExpansion] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const contentWrapperRef = useRef<HTMLDivElement>(null);
   
   // Check if content needs expansion
   useEffect(() => {
@@ -31,6 +33,15 @@ function BookmarkCard({
       // Check if content is taller than its visible area
       setNeedsExpansion(contentRef.current.scrollHeight > contentRef.current.clientHeight);
     }
+  }, [bookmark.content]);
+  
+  // Format content to handle existing ellipses
+  const displayContent = useMemo(() => {
+    // Remove trailing ellipses if they exist to avoid duplication
+    if (bookmark.content && bookmark.content.trim().endsWith('...')) {
+      return bookmark.content.trim().slice(0, -3);
+    }
+    return bookmark.content;
   }, [bookmark.content]);
   
   // Get categories data
@@ -97,7 +108,7 @@ function BookmarkCard({
 
   return (
     <Card className="overflow-hidden hover:shadow-md transition-all duration-300 relative">
-      <CardContent className="p-4 pb-20">
+      <CardContent className="p-4 pb-[5.8rem]">
         <div className="flex items-start gap-3 mb-3">
           <Avatar className="h-10 w-10">
             {bookmark.authorProfileImage ? (
@@ -116,32 +127,34 @@ function BookmarkCard({
           </div>
         </div>
         
-        <div className="relative">
-          {/* Tweet content */}
+        <div 
+          className="relative"
+          onMouseEnter={() => needsExpansion && !isExpanded && setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          ref={contentWrapperRef}
+        >
           <div 
             ref={contentRef}
-            className={`text-sm ${isExpanded ? '' : 'line-clamp-3'}`}
+            className={`text-sm ${isExpanded ? '' : 'line-clamp-3'} ${needsExpansion && !isExpanded ? 'cursor-pointer' : ''}`}
+            onClick={toggleExpanded}
           >
-            {bookmark.content}
+            {displayContent}
+            {!isExpanded && needsExpansion && (
+              <span 
+                className={`${isHovered ? 'text-gray-700 underline' : 'text-muted-foreground'} transition-colors`}
+                aria-hidden="true"
+              >
+                ...
+              </span>
+            )}
           </div>
-          
-          {/* Expansion controls */}
-          {needsExpansion && (
-            isExpanded ? (
-              <button 
-                className="text-xs text-muted-foreground hover:text-gray-500 mt-1"
-                onClick={toggleExpanded}
-              >
-                See less
-              </button>
-            ) : (
-              <button 
-                className="text-xs text-muted-foreground hover:text-gray-700 mt-1"
-                onClick={toggleExpanded}
-              >
-                See more
-              </button>
-            )
+          {isExpanded && needsExpansion && (
+            <button 
+              className="text-xs text-muted-foreground hover:text-gray-500 block leading-none mt-1"
+              onClick={toggleExpanded}
+            >
+              See less
+            </button>
           )}
         </div>
       </CardContent>
@@ -152,7 +165,7 @@ function BookmarkCard({
           <span>{formattedDate}</span>
         </div>
         
-        <CardFooter className="p-3 pt-0 flex-wrap gap-2">
+        <CardFooter className="p-3 pt-1 flex-wrap gap-2">
           <div className="flex items-center gap-2 flex-wrap flex-1">
             <Badge 
               variant="outline" 
