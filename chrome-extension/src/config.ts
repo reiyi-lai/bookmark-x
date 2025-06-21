@@ -1,6 +1,5 @@
 // Chrome extension configuration
 // Detects environment and sets appropriate URLs
-
 type Environment = 'development' | 'production';
 
 interface Config {
@@ -9,16 +8,8 @@ interface Config {
   environment: Environment;
 }
 
-// Check if we're in development mode
-// This is a simple check - we'll use localhost URLs in development
 function detectEnvironment(): Environment {
-  // For Chrome extensions, we can use the chrome.runtime.getManifest().version
-  // to determine if we're in development or production
-  // If version contains 'dev', we're in development mode
-  
-  // During development, you can manually set this to true
-  // This will be replaced with false during production builds
-  const isDevelopment = true; // This should be set to false in production builds
+  const isDevelopment = false; 
   
   return isDevelopment ? 'development' : 'production';
 }
@@ -26,7 +17,6 @@ function detectEnvironment(): Environment {
 const environment = detectEnvironment();
 const isDevelopment = environment === 'development';
 
-// Configure URLs based on environment
 const config: Config = {
   environment,
   apiUrl: isDevelopment 
