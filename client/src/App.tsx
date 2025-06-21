@@ -6,6 +6,7 @@ import NotFound from "./pages/not-found";
 import Home from "./pages/home";
 import LoggedOut from "./pages/logged-out";
 import PrivacyPolicy from "./pages/privacy-policy";
+import LandingPage from "./pages/landing";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { EmailSignupHandler } from "./components/auth/EmailSignupHandler";
@@ -26,9 +27,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/privacy-policy" component={PrivacyPolicy} />
-      
-      {/* Protected routes */}
-      <Route path="/">
+      <Route path="/app">
         {() => {
           // Show logged-out page if no Twitter auth
           if (!twitterAuth.isAuthenticated) {
@@ -38,6 +37,9 @@ function Router() {
           return <Home />;
         }}
       </Route>
+      
+      {/* Landing page as default route */}
+      <Route path="/" component={LandingPage} />
       
       <Route component={NotFound} />
     </Switch>
