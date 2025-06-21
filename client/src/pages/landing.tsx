@@ -33,9 +33,9 @@ const tweetData = [
 ];
 
 // Animation constants to match modal.ts
-const ANIMATION_INTERVAL = 1100; // Time between transitions
-const TRANSITION_DURATION = 500; // Animation duration
-const DASHBOARD_EXPAND_DURATION = 1500; // Duration of dashboard expansion
+const ANIMATION_INTERVAL = 725; // Time between transitions
+const TRANSITION_DURATION = 425; // Animation duration
+const DASHBOARD_EXPAND_DURATION = 1300; // Duration of dashboard expansion
 
 // Animated background bookmark card component
 const BookmarkCard = ({ delay, rotate, scale, x, y }: { 
@@ -164,7 +164,7 @@ const DashboardPreview = ({ status, isExpanding, onExpand }: {
     // Trigger the background expansion with a slight delay
     setTimeout(() => {
       onExpand();
-    }, 50);
+    }, 10);
   } else {
     switch (status) {
       case 'entering':
