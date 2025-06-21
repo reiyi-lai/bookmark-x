@@ -33,8 +33,9 @@ const tweetData = [
 ];
 
 // Animation constants to match modal.ts
-const ANIMATION_INTERVAL = 1100; // 3 seconds between transitions (slightly longer than modal.ts for better readability)
-const TRANSITION_DURATION = 500; // 500ms for the animation itself
+const ANIMATION_INTERVAL = 1100; // Time between transitions
+const TRANSITION_DURATION = 500; // Animation duration
+const DASHBOARD_EXPAND_DURATION = 1500; // Duration of dashboard expansion
 
 // Animated background bookmark card component
 const BookmarkCard = ({ delay, rotate, scale, x, y }: { 
@@ -142,36 +143,59 @@ const TweetCard = ({ tweet, status }: {
 };
 
 // Dashboard preview component
-const DashboardPreview = ({ status }: { 
+const DashboardPreview = ({ status, isExpanding, onExpand }: { 
   status: 'entering' | 'active' | 'exiting' | 'inactive';
+  isExpanding: boolean;
+  onExpand: () => void;
 }) => {
   // Determine animation properties based on status
   let position = {};
   
-  switch (status) {
-    case 'entering':
-      position = { opacity: 1, x: "-50%", scale: 1 };
-      break;
-    case 'active':
-      position = { opacity: 1, x: "-50%", scale: 1 };
-      break;
-    case 'exiting':
-      position = { opacity: 0, x: "-150%", scale: 0.8 };
-      break;
-    case 'inactive':
-      position = { opacity: 0, x: "50%", scale: 0.8 };
-      break;
+  if (isExpanding) {
+    // When expanding, we'll animate this component to full screen first
+    // then trigger the background expansion and fade this out
+    position = { 
+      opacity: [1, 0],
+      x: "-50%",
+      scale: [1, 1.2],
+      zIndex: 10
+    };
+    
+    // Trigger the background expansion with a slight delay
+    setTimeout(() => {
+      onExpand();
+    }, 50);
+  } else {
+    switch (status) {
+      case 'entering':
+        position = { opacity: 1, x: "-50%", scale: 1, zIndex: 10 };
+        break;
+      case 'active':
+        position = { opacity: 1, x: "-50%", scale: 1, zIndex: 10 };
+        break;
+      case 'exiting':
+        position = { opacity: 0, x: "-150%", scale: 0.8, zIndex: 5 };
+        break;
+      case 'inactive':
+        position = { opacity: 0, x: "50%", scale: 0.8, zIndex: 1 };
+        break;
+    }
   }
 
   return (
     <motion.div
-      className="absolute left-1/2 top-0 w-[500px] bg-white rounded-2xl shadow-lg overflow-hidden"
-      initial={{ opacity: 0, x: "50%", scale: 0.8 }}
+      className="absolute left-1/2 top-0 w-[500px] bg-white rounded-2xl shadow-lg overflow-hidden origin-center"
+      initial={{ opacity: 0, x: "50%", scale: 0.8, zIndex: 1 }}
       animate={position}
-      transition={{ 
-        duration: TRANSITION_DURATION / 1000,
-        ease: [0.4, 0, 0.2, 1]
-      }}
+      transition={isExpanding ? 
+        { 
+          duration: 0.5,
+          ease: [0.4, 0, 0.2, 1]
+        } : { 
+          duration: TRANSITION_DURATION / 1000,
+          ease: [0.4, 0, 0.2, 1]
+        }
+      }
     >
       <img 
         src="/bookmarkx-preview.png" 
@@ -187,6 +211,10 @@ export default function LandingPage() {
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [previousIndex, setPreviousIndex] = useState(-1);
   const [transitionInProgress, setTransitionInProgress] = useState(false);
+  const [dashboardExpanded, setDashboardExpanded] = useState(false);
+  const [showBackground, setShowBackground] = useState(false);
+  const [carouselStopped, setCarouselStopped] = useState(false);
+  const [backgroundFullyExpanded, setBackgroundFullyExpanded] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
   
   // Ensure animations start after component mount
@@ -195,15 +223,17 @@ export default function LandingPage() {
     
     // Start the carousel after a short delay
     const timer = setTimeout(() => {
-      setCurrentIndex(0);
-    }, 1000);
+      if (!carouselStopped) {
+        setCurrentIndex(0);
+      }
+    }, 150);
     
     return () => clearTimeout(timer);
-  }, []);
+  }, [carouselStopped]);
   
   // Handle carousel transitions
   useEffect(() => {
-    if (currentIndex === -1) return;
+    if (currentIndex === -1 || carouselStopped) return;
     
     const interval = setInterval(() => {
       if (!transitionInProgress) {
@@ -218,12 +248,19 @@ export default function LandingPage() {
         // Reset transition state after animation completes
         setTimeout(() => {
           setTransitionInProgress(false);
+          
+          // If we've reached the dashboard, trigger expansion immediately
+          if (currentIndex === tweetData.length) {
+            setDashboardExpanded(true);
+            // Stop the carousel once dashboard is expanded
+            setCarouselStopped(true);
+          }
         }, TRANSITION_DURATION);
       }
     }, ANIMATION_INTERVAL);
     
     return () => clearInterval(interval);
-  }, [currentIndex, transitionInProgress]);
+  }, [currentIndex, transitionInProgress, carouselStopped]);
 
   // Get card status based on indices
   const getCardStatus = (index: number) => {
@@ -233,24 +270,20 @@ export default function LandingPage() {
     return 'inactive';
   };
 
-  return (
-    <div className="relative h-screen w-screen overflow-hidden bg-gradient-to-b from-white to-blue-50">
-      {/* Animated background cards */}
-      <div className="absolute inset-0 opacity-30 overflow-hidden">
-        {mounted && (
-          <>
-            <BookmarkCard delay={0} rotate={-5} scale={0.9} x={-100} y={-150} />
-            <BookmarkCard delay={2} rotate={8} scale={0.7} x={300} y={-80} />
-            <BookmarkCard delay={4} rotate={-12} scale={0.8} x={-250} y={200} />
-            <BookmarkCard delay={6} rotate={3} scale={0.6} x={400} y={300} />
-            <BookmarkCard delay={8} rotate={-8} scale={0.75} x={100} y={400} />
-            <BookmarkCard delay={10} rotate={15} scale={0.65} x={-300} y={350} />
-          </>
-        )}
-      </div>
+  // Handle dashboard expansion
+  const handleDashboardExpand = () => {
+    setShowBackground(true);
+    
+    // Mark background as fully expanded after animation completes
+    setTimeout(() => {
+      setBackgroundFullyExpanded(true);
+    }, DASHBOARD_EXPAND_DURATION);
+  };
 
-      {/* Main content */}
-      <div className="relative z-10 flex flex-col items-center justify-center h-full px-4 text-center">
+  return (
+    <div className="relative h-screen w-screen overflow-hidden bg-black">
+      {/* Main content - lower z-index */}
+      <div className="relative flex flex-col items-center justify-center h-full px-4 text-center text-white" style={{ zIndex: backgroundFullyExpanded ? 10 : 1 }}>
         <div className="mb-6 flex items-center">
           <motion.img 
             src="/generated-icon.png" 
@@ -270,7 +303,7 @@ export default function LandingPage() {
         </h2>
 
         {/* Tweet Carousel and Dashboard Preview */}
-        <div className="w-full max-w-4xl mb-8 h-[350px] relative" ref={carouselRef}>
+        <div className="w-full max-w-4xl h-[300px] relative mb-0" ref={carouselRef}>
           {/* Render all tweet cards with appropriate status */}
           {tweetData.map((tweet, index) => (
             <TweetCard 
@@ -283,11 +316,25 @@ export default function LandingPage() {
           {/* Dashboard with appropriate status */}
           <DashboardPreview 
             status={getCardStatus(tweetData.length)}
+            isExpanding={dashboardExpanded}
+            onExpand={handleDashboardExpand}
           />
         </div>
 
         {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 items-center">
+        <motion.div 
+          className="flex flex-col sm:flex-row gap-4 items-center relative"
+          style={{ zIndex: backgroundFullyExpanded ? 20 : 2 }}
+          animate={{ 
+            y: dashboardExpanded ? -160 : 0,
+            opacity: 1
+          }}
+          transition={{ 
+            duration: 1,
+            ease: "easeInOut",
+            delay: dashboardExpanded ? 0.2 : 0
+          }}
+        >
           <motion.a 
             href="https://chrome.google.com/webstore" 
             target="_blank" 
@@ -303,14 +350,56 @@ export default function LandingPage() {
           </motion.a>
           
           <motion.button 
-            className="px-8 py-3 border border-gray-300 text-gray-700 rounded-full font-medium hover:bg-gray-50 transition-colors"
+            className="px-8 py-3 border border-gray-300 text-gray-700 rounded-full font-medium hover:bg-gray-50 transition-colors bg-white"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
             Log In
           </motion.button>
-        </div>
+        </motion.div>
       </div>
+      
+      {/* Animated background cards */}
+      <div className="absolute inset-0 opacity-30 overflow-hidden" style={{ zIndex: backgroundFullyExpanded ? 2 : 3 }}>
+        {mounted && (
+          <>
+            <BookmarkCard delay={0} rotate={-5} scale={0.9} x={-100} y={-150} />
+            <BookmarkCard delay={2} rotate={8} scale={0.7} x={300} y={-80} />
+            <BookmarkCard delay={4} rotate={-12} scale={0.8} x={-250} y={200} />
+            <BookmarkCard delay={6} rotate={3} scale={0.6} x={400} y={300} />
+            <BookmarkCard delay={8} rotate={-8} scale={0.75} x={100} y={400} />
+            <BookmarkCard delay={10} rotate={15} scale={0.65} x={-300} y={350} />
+          </>
+        )}
+      </div>
+      
+      {/* Background layers - highest z-index during expansion, lowest after */}
+      {showBackground && (
+        <motion.div 
+          className="fixed inset-0 w-full h-full"
+          initial={{ 
+            opacity: 1,
+            scale: 0.5
+          }}
+          animate={{ 
+            opacity: backgroundFullyExpanded ? 0.15 : 1,
+            scale: 1
+          }}
+          transition={{ 
+            duration: DASHBOARD_EXPAND_DURATION / 1000,
+            ease: [0.4, 0, 0.2, 1]
+          }}
+          style={{
+            backgroundImage: "url('/bookmarkx-preview.png')",
+            backgroundSize: "cover",
+            backgroundPosition: "center center",
+            backgroundRepeat: "no-repeat",
+            transformOrigin: "center center",
+            pointerEvents: "none",
+            zIndex: backgroundFullyExpanded ? 0 : 100 // Highest during expansion, lowest after
+          }}
+        />
+      )}
     </div>
   );
 } 
