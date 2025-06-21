@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Bookmark-X",
-  "version": "1.0.0",
-  "description": "AI-powered bookmark manager for Twitter/X posts",
+  "name": "Bookmark-X - Organize Twitter bookmarks into categories",
+  "version": "1.0.1",
+  "description": "Sort your Twitter bookmarks into categories with our custom ML algorithm. Use our dashboard to streamline your research and reading.",
   
   "permissions": [
     "storage",
