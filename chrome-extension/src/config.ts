@@ -24,8 +24,8 @@ const config: Config = {
     : 'https://bookmark-x-production.up.railway.app',  // Production API
   
   frontendUrl: isDevelopment
-    ? 'http://localhost:3000'  // Local development frontend (Vite default)
-    : 'https://bookmark-x.info',  // Production frontend
+    ? 'http://localhost:3000/app'  // Local development frontend (Vite default)
+    : 'https://bookmark-x.info/app',  // Production frontend
 };
 
 console.log(`Bookmark-X: Running in ${environment} mode`);
