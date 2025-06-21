@@ -7,7 +7,7 @@ import { cleanTwitterHtml } from "@shared/utils";
 import { CalendarIcon, Tag, Trash2, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { useCategories } from "../../hooks/useCategories";
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState, useRef, useEffect } from "react";
 
 interface BookmarkCardProps {
   bookmark: Bookmark;
@@ -20,6 +20,19 @@ function BookmarkCard({
   onChangeCategory,
   onDelete
 }: BookmarkCardProps) {
+  // State for expanded content
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [needsExpansion, setNeedsExpansion] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  
+  // Check if content needs expansion
+  useEffect(() => {
+    if (contentRef.current) {
+      // Check if content is taller than its visible area
+      setNeedsExpansion(contentRef.current.scrollHeight > contentRef.current.clientHeight);
+    }
+  }, [bookmark.content]);
+  
   // Get categories data
   const { categories } = useCategories();
   
@@ -75,9 +88,16 @@ function BookmarkCard({
     return cleanTwitterHtml(bookmark.authorName || '');
   }, [bookmark.authorName]);
 
+  // Toggle expanded state
+  const toggleExpanded = () => {
+    if (needsExpansion) {
+      setIsExpanded(!isExpanded);
+    }
+  };
+
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow">
-      <CardContent className="p-4">
+    <Card className="overflow-hidden hover:shadow-md transition-all duration-300 relative">
+      <CardContent className="p-4 pb-20">
         <div className="flex items-start gap-3 mb-3">
           <Avatar className="h-10 w-10">
             {bookmark.authorProfileImage ? (
@@ -96,47 +116,76 @@ function BookmarkCard({
           </div>
         </div>
         
-        <p className="text-sm mb-3 line-clamp-3">{bookmark.content}</p>
-        
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-          <CalendarIcon className="h-3 w-3" />
-          <span>{formattedDate}</span>
+        <div className="relative">
+          {/* Tweet content */}
+          <div 
+            ref={contentRef}
+            className={`text-sm ${isExpanded ? '' : 'line-clamp-3'}`}
+          >
+            {bookmark.content}
+          </div>
+          
+          {/* Expansion controls */}
+          {needsExpansion && (
+            isExpanded ? (
+              <button 
+                className="text-xs text-muted-foreground hover:text-gray-500 mt-1"
+                onClick={toggleExpanded}
+              >
+                See less
+              </button>
+            ) : (
+              <button 
+                className="text-xs text-muted-foreground hover:text-gray-700 mt-1"
+                onClick={toggleExpanded}
+              >
+                See more
+              </button>
+            )
+          )}
         </div>
       </CardContent>
       
-      <CardFooter className="p-3 pt-0 flex-wrap gap-2">
-        <div className="flex items-center gap-2 flex-wrap flex-1">
-          <Badge 
-            variant="outline" 
-            className={`cursor-pointer ${categoryBadgeClass}`}
-            onClick={onChangeCategory}
-          >
-            <Tag className="h-3 w-3 mr-1" />
-            <span className="truncate max-w-[100px]">{categoryName}</span>
-          </Badge>
+      <div className="absolute bottom-0 left-0 right-0">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground px-4 pb-2">
+          <CalendarIcon className="h-3 w-3" />
+          <span>{formattedDate}</span>
         </div>
         
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => window.open(bookmark.url, "_blank")}
-          >
-            <ExternalLink className="h-4 w-4" />
-            <span className="sr-only">Open tweet</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-destructive hover:text-destructive/90"
-            onClick={onDelete}
-          >
-            <Trash2 className="h-4 w-4" />
-            <span className="sr-only">Delete</span>
-          </Button>
-        </div>
-      </CardFooter>
+        <CardFooter className="p-3 pt-0 flex-wrap gap-2">
+          <div className="flex items-center gap-2 flex-wrap flex-1">
+            <Badge 
+              variant="outline" 
+              className={`cursor-pointer ${categoryBadgeClass}`}
+              onClick={onChangeCategory}
+            >
+              <Tag className="h-3 w-3 mr-1" />
+              <span className="truncate max-w-[100px]">{categoryName}</span>
+            </Badge>
+          </div>
+          
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => window.open(bookmark.url, "_blank")}
+            >
+              <ExternalLink className="h-4 w-4" />
+              <span className="sr-only">Open tweet</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive/90"
+              onClick={onDelete}
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="sr-only">Delete</span>
+            </Button>
+          </div>
+        </CardFooter>
+      </div>
     </Card>
   );
 }
