@@ -336,7 +336,7 @@ export default function LandingPage() {
           }}
         >
           <motion.a 
-            href="https://chrome.google.com/webstore" 
+            href="https://chromewebstore.google.com/detail/bookmark-x/bejljpjhkmiimkpompiinllbhjghkpmd" 
             target="_blank" 
             rel="noopener noreferrer"
             className="px-8 py-3 bg-blue-600 text-white rounded-full font-medium shadow-lg hover:bg-blue-700 transition-colors flex items-center"
