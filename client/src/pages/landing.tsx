@@ -33,9 +33,9 @@ const tweetData = [
 ];
 
 // Animation constants to match modal.ts
-const ANIMATION_INTERVAL = 725; // Time between transitions
-const TRANSITION_DURATION = 425; // Animation duration
-const DASHBOARD_EXPAND_DURATION = 1300; // Duration of dashboard expansion
+const ANIMATION_INTERVAL = 500; // Time between transitions
+const TRANSITION_DURATION = 400; // Animation duration
+const DASHBOARD_EXPAND_DURATION = 1200; // Duration of dashboard expansion
 
 // Animated background bookmark card component
 const BookmarkCard = ({ delay, rotate, scale, x, y }: { 
@@ -299,7 +299,7 @@ export default function LandingPage() {
           </h1>
         </div>
 
-        <h2 className="text-3xl md:text-4xl font-bold mb-4 max-w-2xl">
+        <h2 className="text-3xl md:text-4xl font-bold mb-6 max-w-2xl">
           Your smart knowledge base for Twitter bookmarks
         </h2>
 
@@ -326,8 +326,9 @@ export default function LandingPage() {
         <div className="relative" style={{ zIndex: buttonsLayer, pointerEvents: "auto" }}>
           <motion.div 
             className="flex flex-col sm:flex-row gap-4 items-center"
+            initial={{ y: -15, opacity: 1 }}
             animate={{ 
-              y: dashboardExpanded ? -160 : 0,
+              y: dashboardExpanded ? -200 : -15,
               opacity: 1
             }}
             transition={{ 

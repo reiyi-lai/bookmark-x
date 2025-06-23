@@ -14,21 +14,21 @@ import { EmailSignupHandler } from "./components/auth/EmailSignupHandler";
 function Router() {
   const { twitterAuth, isLoading } = useAuth();
 
-  // Show loading while auth is initializing
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-gray-500 dark:text-gray-400">Loading...</div>
-      </div>
-    );
-  }
-
-  // Public routes (no auth required)
+  // Public routes (no auth required) - render immediately
   return (
     <Switch>
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/app">
         {() => {
+          // Only show loading state for protected app routes
+          if (isLoading) {
+            return (
+              <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+                <div className="text-gray-500 dark:text-gray-400">Loading...</div>
+              </div>
+            );
+          }
+          
           // Show logged-out page if no Twitter auth
           if (!twitterAuth.isAuthenticated) {
             return <LoggedOut />;
