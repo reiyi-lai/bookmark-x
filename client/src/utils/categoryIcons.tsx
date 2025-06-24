@@ -84,12 +84,12 @@ export const getCategoryBadgeClass = (categoryId: number, withHover: boolean = f
   const hoverClass = withHover ? ' hover:bg-opacity-20' : '';
   
   switch (categoryId) {
-    case 1: // Content Ideas
-      return `bg-purple-500/10 text-purple-500${hoverClass}`;
-    case 2: // Automation Tools
+    case 1: // Content Ideas - now blue
       return `bg-blue-500/10 text-blue-500${hoverClass}`;
-    case 4: // Career Tips
-      return `bg-orange-500/10 text-orange-500${hoverClass}`;
+    case 2: // Automation Tools - now purple
+      return `bg-purple-500/10 text-purple-500${hoverClass}`;
+    case 4: // Career Tips - now green
+      return `bg-green-500/10 text-green-500${hoverClass}`;
     case 6: // Knowledge/Trivia
       return `bg-yellow-500/10 text-yellow-500${hoverClass}`;
     case 7: // Uncategorized
