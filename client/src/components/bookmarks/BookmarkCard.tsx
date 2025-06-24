@@ -7,6 +7,7 @@ import { cleanTwitterHtml } from "@shared/utils";
 import { CalendarIcon, Tag, Trash2, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { useCategories } from "../../hooks/useCategories";
+import { getCategoryBadgeClass } from "../../utils/categoryIcons";
 import { memo, useMemo, useState, useRef, useEffect } from "react";
 
 interface BookmarkCardProps {
@@ -72,26 +73,7 @@ function BookmarkCard({
 
   // Memoize category badge class to avoid recalculation on each render
   const categoryBadgeClass = useMemo(() => {
-    if (!bookmark.categoryId) return 'bg-gray-500/10 text-gray-500';
-    
-    const categoryId = bookmark.categoryId;
-    
-    switch (categoryId) {
-      case 1: // Content Ideas
-        return 'bg-blue-500/10 text-blue-500';
-      case 2: // Automation Tools
-        return 'bg-purple-500/10 text-purple-500';
-      case 3: // Interesting Reads
-        return 'bg-amber-500/10 text-amber-500';
-      case 4: // Career Tips
-        return 'bg-green-500/10 text-green-500';
-      case 5: // Quotes
-        return 'bg-pink-500/10 text-pink-500';
-      case 6: // General Knowledge/Trivia
-        return 'bg-indigo-500/10 text-indigo-500';
-      default:
-        return 'bg-gray-500/10 text-gray-500';
-    }
+    return getCategoryBadgeClass(bookmark.categoryId || 7); // Default to Uncategorized
   }, [bookmark.categoryId]);
 
   // Memoize cleaned author name

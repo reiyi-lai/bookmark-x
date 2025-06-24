@@ -80,6 +80,27 @@ export const getMaterialIcon = (iconName: string): ReactNode => {
   );
 };
 
-export const getCategoryBadgeClass = (iconName: string): string => {
-  return categoryIcons[iconName]?.color || "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+export const getCategoryBadgeClass = (categoryId: number, withHover: boolean = false): string => {
+  const hoverClass = withHover ? ' hover:bg-opacity-20' : '';
+  
+  switch (categoryId) {
+    case 1: // Content Ideas
+      return `bg-purple-500/10 text-purple-500${hoverClass}`;
+    case 2: // Automation Tools
+      return `bg-blue-500/10 text-blue-500${hoverClass}`;
+    case 4: // Career Tips
+      return `bg-orange-500/10 text-orange-500${hoverClass}`;
+    case 6: // Knowledge/Trivia
+      return `bg-yellow-500/10 text-yellow-500${hoverClass}`;
+    case 7: // Uncategorized
+      return `bg-gray-500/10 text-gray-500${hoverClass}`;
+    case 10: // Job Opportunities
+      return `bg-indigo-500/10 text-indigo-500${hoverClass}`;
+    case 11: // Personal Reads
+      return `bg-pink-500/10 text-pink-500${hoverClass}`;
+    case 12: // Academic Research
+      return `bg-violet-500/10 text-violet-500${hoverClass}`;
+    default:
+      return `bg-gray-500/10 text-gray-500${hoverClass}`;
+  }
 };
