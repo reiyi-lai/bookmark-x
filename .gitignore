@@ -6,6 +6,7 @@ dist
 extension-build
 server/public
 vite.config.ts.*
+*.zip
 
 # Environment
 .env
@@ -21,8 +22,9 @@ vite.config.ts.*
 supabase/config.toml
 supabase/.branches
 
-
-
+# Project Documentation
+SYSTEM_DOCUMENTATION.md
+REDUNDANCY_ANALYSIS.md
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
