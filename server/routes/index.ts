@@ -299,8 +299,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "User not authenticated" });
       }
       
-      // Base query - category and search filtering handled on client side
-      let query = supabase
+      // Single query to get all bookmark data
+      const { data: bookmarksData, error } = await supabase
         .from('bookmarks')
         .select(`
           id,
@@ -317,27 +317,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .eq('user_id', userId)
         .order('created_at', { ascending: false }); // Order by most recent
 
-      const { data: bookmarksData, error } = await query;
-
       if (error) {
         console.error("Supabase error:", error);
         return res.status(500).json({ error: "Database error" });
       }
 
-      // Get all bookmarks for this user (without filters) to count by category
-      const { data: allUserBookmarks, error: allBookmarksError } = await supabase
-        .from('bookmarks')
-        .select('category_id')
-        .eq('user_id', userId);
-        
-      if (allBookmarksError) {
-        console.error("Error fetching all bookmarks for counting:", allBookmarksError);
-        return res.status(500).json({ error: "Database error getting category counts" });
-      }
-      
-      // Count bookmarks by category on the server side
       const categoryCountsMap: Record<number, number> = {};
-      allUserBookmarks?.forEach(bookmark => {
+      bookmarksData?.forEach(bookmark => {
         const categoryId = bookmark.category_id;
         categoryCountsMap[categoryId] = (categoryCountsMap[categoryId] || 0) + 1;
       });
