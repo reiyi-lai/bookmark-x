@@ -32,10 +32,28 @@ const tweetData = [
   }
 ];
 
-// Animation constants to match modal.ts
-const ANIMATION_INTERVAL = 500; // Time between transitions
-const TRANSITION_DURATION = 400; // Animation duration
-const DASHBOARD_EXPAND_DURATION = 1200; // Duration of dashboard expansion
+// Animation constants - now responsive
+const DESKTOP_ANIMATION_INTERVAL = 500; // Time between transitions
+const MOBILE_ANIMATION_INTERVAL = 400; // Faster on mobile
+const TRANSITION_DURATION = 425; // Animation duration
+const DASHBOARD_EXPAND_DURATION = 1300; // Duration of dashboard expansion
+
+// Custom hook for mobile detection
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768); // md breakpoint
+    };
+
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
+  return isMobile;
+};
 
 // Animated background bookmark card component
 const BookmarkCard = ({ delay, rotate, scale, x, y }: { 
@@ -84,9 +102,10 @@ const BookmarkCard = ({ delay, rotate, scale, x, y }: {
 };
 
 // Tweet card component for the carousel
-const TweetCard = ({ tweet, status }: { 
+const TweetCard = ({ tweet, status, isMobile }: { 
   tweet: typeof tweetData[0]; 
   status: 'entering' | 'active' | 'exiting' | 'inactive';
+  isMobile: boolean;
 }) => {
   // Determine animation properties based on status
   let position = {};
@@ -108,7 +127,11 @@ const TweetCard = ({ tweet, status }: {
 
   return (
     <motion.div
-      className="absolute left-1/2 top-0 w-[500px] min-h-[250px] bg-white rounded-2xl p-12 shadow-lg flex flex-col justify-center"
+      className={`absolute left-1/2 top-0 bg-white rounded-2xl shadow-lg flex flex-col justify-center ${
+        isMobile 
+          ? 'w-[90vw] max-w-[400px] min-h-[200px] p-6' 
+          : 'w-[500px] min-h-[250px] p-12'
+      }`}
       initial={{ opacity: 0, x: "50%", scale: 0.8 }}
       animate={position}
       transition={{ 
@@ -116,8 +139,8 @@ const TweetCard = ({ tweet, status }: {
         ease: [0.4, 0, 0.2, 1] // cubic-bezier(0.4, 0, 0.2, 1)
       }}
     >
-      <div className="flex items-center mb-3">
-        <div className="w-12 h-12 rounded-full overflow-hidden mr-3">
+      <div className={`flex items-center ${isMobile ? 'mb-2' : 'mb-3'}`}>
+        <div className={`rounded-full overflow-hidden mr-3 ${isMobile ? 'w-10 h-10' : 'w-12 h-12'}`}>
           <img 
             src={tweet.authorProfileImage}
             alt={tweet.authorName}
@@ -131,11 +154,11 @@ const TweetCard = ({ tweet, status }: {
           />
         </div>
         <div>
-          <div className="font-bold text-base text-gray-900">{tweet.authorName}</div>
-          <div className="text-sm text-gray-500">@{tweet.authorUsername}</div>
+          <div className={`font-bold text-gray-900 ${isMobile ? 'text-sm' : 'text-base'}`}>{tweet.authorName}</div>
+          <div className={`text-gray-500 ${isMobile ? 'text-xs' : 'text-sm'}`}>@{tweet.authorUsername}</div>
         </div>
       </div>
-      <div className="text-[15px] leading-6 text-gray-800 line-clamp-4">
+      <div className={`text-gray-800 line-clamp-4 ${isMobile ? 'text-sm leading-5' : 'text-[15px] leading-6'}`}>
         {tweet.content}
       </div>
     </motion.div>
@@ -143,10 +166,11 @@ const TweetCard = ({ tweet, status }: {
 };
 
 // Dashboard preview component
-const DashboardPreview = ({ status, isExpanding, onExpand }: { 
+const DashboardPreview = ({ status, isExpanding, onExpand, isMobile }: { 
   status: 'entering' | 'active' | 'exiting' | 'inactive';
   isExpanding: boolean;
   onExpand: () => void;
+  isMobile: boolean;
 }) => {
   // Determine animation properties based on status
   let position = {};
@@ -184,7 +208,9 @@ const DashboardPreview = ({ status, isExpanding, onExpand }: {
 
   return (
     <motion.div
-      className="absolute left-1/2 top-0 w-[500px] bg-white rounded-2xl shadow-lg overflow-hidden origin-center"
+      className={`absolute left-1/2 top-0 bg-white rounded-2xl shadow-lg overflow-hidden origin-center ${
+        isMobile ? 'w-[90vw] max-w-[400px]' : 'w-[500px]'
+      }`}
       initial={{ opacity: 0, x: "50%", scale: 0.8, zIndex: 1 }}
       animate={position}
       transition={isExpanding ? 
@@ -207,6 +233,9 @@ const DashboardPreview = ({ status, isExpanding, onExpand }: {
 };
 
 export default function LandingPage() {
+  const isMobile = useIsMobile();
+  const animationInterval = isMobile ? MOBILE_ANIMATION_INTERVAL : DESKTOP_ANIMATION_INTERVAL;
+  
   const [mounted, setMounted] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [previousIndex, setPreviousIndex] = useState(-1);
@@ -258,7 +287,7 @@ export default function LandingPage() {
           }
         }, TRANSITION_DURATION);
       }
-    }, ANIMATION_INTERVAL);
+    }, animationInterval);
     
     return () => clearInterval(interval);
   }, [currentIndex, transitionInProgress, carouselStopped]);
@@ -285,32 +314,37 @@ export default function LandingPage() {
     <div className="relative h-screen w-screen overflow-hidden bg-black">
       {/* Main content - lower z-index */}
       <div className="relative flex flex-col items-center justify-center h-full px-4 text-center text-white" style={{ zIndex: backgroundFullyExpanded ? 10 : 1 }}>
-        <div className="mb-6 flex items-center">
+        <div className="mb-4 md:mb-6 flex items-center">
           <motion.img 
             src="/generated-icon.png" 
             alt="Bookmark-X Logo" 
-            className="w-12 h-12 mr-3"
+            className={`mr-3 ${isMobile ? 'w-10 h-10' : 'w-12 h-12'}`}
             initial={{ rotate: 0 }}
             animate={{ rotate: 360 }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
           />
-          <h1 className="text-4xl font-bold">
+          <h1 className={`font-bold ${isMobile ? 'text-3xl' : 'text-4xl'}`}>
             Bookmark<span className="text-blue-600">X</span>
           </h1>
         </div>
 
-        <h2 className="text-3xl md:text-4xl font-bold mb-6 max-w-2xl">
+        <h2 className="text-2xl md:text-4xl font-bold mb-4 md:mb-6 max-w-2xl px-4">
           Your smart knowledge base for Twitter bookmarks
         </h2>
 
         {/* Tweet Carousel and Dashboard Preview */}
-        <div className="w-full max-w-4xl h-[300px] relative mb-0" ref={carouselRef} style={{ pointerEvents: "none" }}>
+        <div 
+          className={`w-full max-w-4xl relative mb-0 ${isMobile ? 'h-[200px]' : 'h-[300px]'}`} 
+          ref={carouselRef} 
+          style={{ pointerEvents: "none" }}
+        >
           {/* Render all tweet cards with appropriate status */}
           {tweetData.map((tweet, index) => (
             <TweetCard 
               key={tweet.id} 
               tweet={tweet} 
               status={getCardStatus(index)}
+              isMobile={isMobile}
             />
           ))}
           
@@ -319,16 +353,17 @@ export default function LandingPage() {
             status={getCardStatus(tweetData.length)}
             isExpanding={dashboardExpanded}
             onExpand={handleDashboardExpand}
+            isMobile={isMobile}
           />
         </div>
 
         {/* CTA Buttons - Positioned with highest z-index but keeping original layout */}
         <div className="relative" style={{ zIndex: buttonsLayer, pointerEvents: "auto" }}>
           <motion.div 
-            className="flex flex-col sm:flex-row gap-4 items-center"
-            initial={{ y: -15, opacity: 1 }}
+            className="flex flex-col sm:flex-row gap-3 md:gap-4 items-center px-4"
+            initial={{ y: isMobile ? 5 : 15, opacity: 1 }}
             animate={{ 
-              y: dashboardExpanded ? -200 : -15,
+              y: dashboardExpanded ? (isMobile ? -150 : -200) : (isMobile ? 5 : 15),
               opacity: 1
             }}
             transition={{ 
@@ -341,18 +376,22 @@ export default function LandingPage() {
               href="https://chromewebstore.google.com/detail/bookmark-x/bejljpjhkmiimkpompiinllbhjghkpmd" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="px-8 py-3 bg-blue-600 text-white rounded-full font-medium shadow-lg hover:bg-blue-700 transition-colors flex items-center"
+              className={`bg-blue-600 text-white rounded-full font-medium shadow-lg hover:bg-blue-700 transition-colors flex items-center ${
+                isMobile ? 'px-6 py-2.5 text-sm' : 'px-8 py-3'
+              }`}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <svg className={`mr-2 fill-none stroke-current ${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
               Add to Chrome
             </motion.a>
             
             <motion.button 
-              className="px-8 py-3 border border-gray-300 text-gray-700 rounded-full font-medium hover:bg-gray-50 transition-colors bg-white"
+              className={`border border-gray-300 text-gray-700 rounded-full font-medium hover:bg-gray-50 transition-colors bg-white ${
+                isMobile ? 'px-6 py-2.5 text-sm' : 'px-8 py-3'
+              }`}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -362,19 +401,21 @@ export default function LandingPage() {
         </div>
       </div>
       
-      {/* Animated background cards */}
-      <div className="absolute inset-0 opacity-30 overflow-hidden" style={{ zIndex: backgroundFullyExpanded ? 2 : 3, pointerEvents: "none" }}>
-        {mounted && (
-          <>
-            <BookmarkCard delay={0} rotate={-5} scale={0.9} x={-100} y={-150} />
-            <BookmarkCard delay={2} rotate={8} scale={0.7} x={300} y={-80} />
-            <BookmarkCard delay={4} rotate={-12} scale={0.8} x={-250} y={200} />
-            <BookmarkCard delay={6} rotate={3} scale={0.6} x={400} y={300} />
-            <BookmarkCard delay={8} rotate={-8} scale={0.75} x={100} y={400} />
-            <BookmarkCard delay={10} rotate={15} scale={0.65} x={-300} y={350} />
-          </>
-        )}
-      </div>
+      {/* Animated background cards - hidden on mobile */}
+      {!isMobile && (
+        <div className="absolute inset-0 opacity-30 overflow-hidden" style={{ zIndex: backgroundFullyExpanded ? 2 : 3, pointerEvents: "none" }}>
+          {mounted && (
+            <>
+              <BookmarkCard delay={0} rotate={-5} scale={0.9} x={-100} y={-150} />
+              <BookmarkCard delay={2} rotate={8} scale={0.7} x={300} y={-80} />
+              <BookmarkCard delay={4} rotate={-12} scale={0.8} x={-250} y={200} />
+              <BookmarkCard delay={6} rotate={3} scale={0.6} x={400} y={300} />
+              <BookmarkCard delay={8} rotate={-8} scale={0.75} x={100} y={400} />
+              <BookmarkCard delay={10} rotate={15} scale={0.65} x={-300} y={350} />
+            </>
+          )}
+        </div>
+      )}
       
       {/* Background layers - highest z-index during expansion, lowest after */}
       {showBackground && (
