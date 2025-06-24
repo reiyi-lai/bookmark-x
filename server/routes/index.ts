@@ -2,15 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { createCategorizer } from "../services/ml-categorizer";
 import { BookmarkService } from "../services/bookmark-service";
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize Supabase
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { supabase } from "../../shared/supabase-client";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // 1. CHROME EXTENSION ROUTES

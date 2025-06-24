@@ -1,20 +1,10 @@
 import { createCategorizer } from './ml-categorizer';
-import { createClient } from '@supabase/supabase-js';
 import { enrichCategoryWithMetadata, type Category, type ImportedBookmark } from '@shared/schema';
+import { supabase } from '../../shared/supabase-client';
 
 export interface ProcessedBookmark extends ImportedBookmark {
   categoryId: number;
 }
-
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 /**
  * BookmarkService handles business logic for bookmark processing
