@@ -256,7 +256,7 @@ export default function LandingPage() {
       if (!carouselStopped) {
         setCurrentIndex(0);
       }
-    }, 150);
+    }, 250);
     
     return () => clearTimeout(timer);
   }, [carouselStopped]);
