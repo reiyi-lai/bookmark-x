@@ -35,7 +35,7 @@ const tweetData = [
 // Animation constants - now responsive
 const DESKTOP_ANIMATION_INTERVAL = 500; // Time between transitions
 const MOBILE_ANIMATION_INTERVAL = 400; // Faster on mobile
-const TRANSITION_DURATION = 425; // Animation duration
+const TRANSITION_DURATION = 325; // Animation duration
 const DASHBOARD_EXPAND_DURATION = 1300; // Duration of dashboard expansion
 
 // Custom hook for mobile detection
