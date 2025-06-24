@@ -3,7 +3,8 @@ import type { ClientBookmark as Bookmark, Category } from "@shared/schema";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import BookmarksGrid from "../bookmarks/BookmarksGrid";
-import { Menu, Search, RefreshCw } from "lucide-react";
+import { Menu, Search, RefreshCw, Moon, Sun } from "lucide-react";
+import { useTheme } from "../../contexts/ThemeContext";
 
 interface MainContentProps {
   bookmarks: Bookmark[];
@@ -32,6 +33,7 @@ export default function MainContent({
 }: MainContentProps) {
   const [prevScrollPos, setPrevScrollPos] = useState(0);
   const [visible, setVisible] = useState(true);
+  const { theme, toggleTheme } = useTheme();
   
   useEffect(() => {
     const handleScroll = () => {
@@ -82,6 +84,17 @@ export default function MainContent({
             </div>
 
         <div className="flex items-center gap-2">
+          {/* Theme Toggle Button */}
+          <Button
+            onClick={toggleTheme}
+            variant="ghost"
+            size="icon"
+            className="text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
+
             <div className="relative">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
               <Input

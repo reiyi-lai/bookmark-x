@@ -2,12 +2,9 @@
 import { Category } from "@shared/schema";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
-import { Switch } from "../ui/switch";
-import { Label } from "../ui/label";
-import { useTheme } from "../../contexts/ThemeContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { getMaterialIcon } from "../../utils/categoryIcons";
-import { X, Moon, LogOut, MessageCircle } from "lucide-react";
+import { X, LogOut, HelpCircle, MessageCircle } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 
 interface SidebarProps {
@@ -29,7 +26,6 @@ export default function Sidebar({
   categoryCounts,
   isLoading
 }: SidebarProps) {
-  const { theme, toggleTheme } = useTheme();
   const { logout } = useAuth();
 
   return (
@@ -122,50 +118,38 @@ export default function Sidebar({
         <Separator className="border-gray-200 dark:border-gray-800 my-3" />
 
         <div className="pt-1">
-          {/* <h2 className="uppercase text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 tracking-wider">
-            Settings
-          </h2> */}
-
           {/* Chat with Bookmarks - Coming Soon */}
           <div className="mb-2">
-          <div className="flex items-center px-3 py-2 opacity-70 cursor-not-allowed">
-            <MessageCircle className="h-4 w-4 mr-2 text-gray-400" />
-            <div className="flex flex-col">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Chat with Bookmarks</span>
-              <span className="text-xs text-gray-400 dark:text-gray-500">Coming soon...</span>
+            <div className="flex items-center px-3 py-2 opacity-70">
+              <MessageCircle className="h-4 w-4 mr-2 text-gray-400" />
+              <div className="flex flex-col">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Chat with Bookmarks</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">Coming soon...</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <Separator className="border-gray-200 dark:border-gray-800 my-3" />
+          <Separator className="border-gray-200 dark:border-gray-800 my-3" />
 
-        <div className="flex items-center px-3 py-2">
-            <Label htmlFor="dark-mode" className="text-gray-700 dark:text-gray-300">
-              <Moon className="h-4 w-4 inline mr-2" />
-              Dark Mode
-            </Label>
-            <Switch
-              id="dark-mode"
-              checked={theme === "dark"}
-              onCheckedChange={toggleTheme}
-              className="ml-auto"
-            />
-          </div>
-
-          {/* <Link href="/privacy-policy">
-            <Button
-              variant="ghost"
-              className="flex items-center w-full px-3 py-2 rounded-lg mt-2 transition-colors text-left text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+          {/* Share Feedback Link */}
+          <div className="mb-4">
+            <a 
+              href="https://twitter.com/rylitynow"
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors"
             >
-              <Shield className="h-4 w-4 mr-2" />
-              Privacy Policy
-            </Button>
-          </Link> */}
+              <HelpCircle className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+              <div className="flex flex-col">
+                <span className="text-sm text-gray-900 dark:text-gray-300">Share Feedback</span>
+              </div>
+            </a>
+          </div>
 
           <Button
             onClick={() => logout()}
             variant="ghost"
-            className="flex items-center w-full px-3 py-2 rounded-lg mt-4 transition-colors text-left text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="flex items-center w-full px-3 py-2 rounded-lg transition-colors text-left text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
           >
             <LogOut className="h-4 w-4 mr-2" />
             Logout
