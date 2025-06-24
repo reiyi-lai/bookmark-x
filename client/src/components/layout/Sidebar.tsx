@@ -7,7 +7,7 @@ import { Label } from "../ui/label";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { getMaterialIcon } from "../../utils/categoryIcons";
-import { X, Moon, LogOut } from "lucide-react";
+import { X, Moon, LogOut, MessageCircle } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 
 interface SidebarProps {
@@ -59,7 +59,7 @@ export default function Sidebar({
       </div>
 
       <div className="p-4">
-        <div className="mb-6">
+        <div className="mb-4">
           <h2 className="uppercase text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 tracking-wider">
             Categories
           </h2>
@@ -119,14 +119,27 @@ export default function Sidebar({
           )}
         </div>
 
-        <Separator className="border-gray-200 dark:border-gray-800 my-4" />
+        <Separator className="border-gray-200 dark:border-gray-800 my-3" />
 
-        <div className="pt-2">
-          <h2 className="uppercase text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 tracking-wider">
+        <div className="pt-1">
+          {/* <h2 className="uppercase text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 tracking-wider">
             Settings
-          </h2>
+          </h2> */}
 
-          <div className="flex items-center px-3 py-2">
+          {/* Chat with Bookmarks - Coming Soon */}
+          <div className="mb-2">
+          <div className="flex items-center px-3 py-2 opacity-70 cursor-not-allowed">
+            <MessageCircle className="h-4 w-4 mr-2 text-gray-400" />
+            <div className="flex flex-col">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Chat with Bookmarks</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">Coming soon...</span>
+            </div>
+          </div>
+        </div>
+
+        <Separator className="border-gray-200 dark:border-gray-800 my-3" />
+
+        <div className="flex items-center px-3 py-2">
             <Label htmlFor="dark-mode" className="text-gray-700 dark:text-gray-300">
               <Moon className="h-4 w-4 inline mr-2" />
               Dark Mode
