@@ -23,8 +23,82 @@
    ```
    - Client fires TWO requests and gets responses for:
     - GET /api/categories → Server queries Supabase categories table
-    - GET /api/bookmarks (bookmarks and category counts) → Server queries Supabase bookmarks table
+    - GET /api/bookmarks → Server queries Supabase bookmarks table, returns bookmark array
    - Client-side filtering for categories and search (no server round-trips)
+   - Client-side category counting from bookmark data (no server calculation)
+
+## API Routes
+
+### Chrome Extension Routes
+| Endpoint | Method | Purpose | Authentication |
+|----------|--------|---------|----------------|
+| `/api/bookmarks/import` | POST | Bulk import tweets from extension | Twitter ID in payload |
+
+### Web Application Routes
+| Endpoint | Method | Purpose | Authentication |
+|----------|--------|---------|----------------|
+| `/api/bookmarks` | GET | Fetch user bookmarks from Supabase and transform bookmark for client | X-Twitter-ID header |
+| `/api/categories` | GET | Fetch categories from Supbase and enrich with metadata | None (public) |
+| `/api/bookmarks/:id` | DELETE | Delete specific bookmark | X-Twitter-ID header |
+| `/api/bookmarks/:id/category` | PATCH | Update bookmark category | X-Twitter-ID header |
+| `/api/users/:userId/complete-registration` | POST | Complete user email registration | X-Twitter-ID header |
+
+### API Response Formats
+
+#### GET `/api/categories`
+```typescript
+// Response: Category[]
+[
+  {
+    id: 1,
+    name: "Content Ideas",
+    description: "Ideas for content creation and social media",
+    color: "#8b5cf6",
+    created_at: "2024-01-01T00:00:00Z",
+    icon: "lightbulb",
+    order: 1
+  },
+  // ... other categories
+]
+```
+
+#### GET `/api/bookmarks`
+```typescript
+// Response: ClientBookmark[] (client calculates category counts)
+[
+  {
+    id: "1234567890",
+    content: "This is an amazing tweet about AI development...",
+    url: "https://x.com/user/status/1234567890",
+    categoryId: 1,
+    tweetId: "1234567890",
+    authorName: "John Doe",
+    authorUsername: "johndoe",
+    authorProfileImage: "https://pbs.twimg.com/profile_images/...",
+    createdAt: "2024-01-15T10:30:00Z",
+    bookmarkedAt: "2024-01-15T11:00:00Z"
+  }
+  // ... other bookmarks
+]
+```
+
+### Authentication Flow
+
+#### Chrome Extension → Server
+```
+Extension Collection → Twitter User Info → Server Validation → User Creation/Lookup
+```
+- Extension extracts Twitter user info from DOM
+- Sends user data with bookmark payload
+- Server creates or finds existing user in Supabase
+
+#### Client → Server
+```
+Client Request → Twitter ID in Header → User Lookup → Request Processing
+```
+- Client includes `X-Twitter-ID` header
+- Server validates user exists in database
+- Processes request with user context
 
 ## Data Transformations
 
@@ -84,38 +158,3 @@ interface ClientBookmark {
   // ... other fields
 }
 ```
-
-## API Routes
-
-### Chrome Extension Routes
-| Endpoint | Method | Purpose | Authentication |
-|----------|--------|---------|----------------|
-| `/api/bookmarks/import` | POST | Bulk import tweets from extension | Twitter ID in payload |
-
-### Web Application Routes
-| Endpoint | Method | Purpose | Authentication |
-|----------|--------|---------|----------------|
-| `/api/bookmarks` | GET | Fetch user bookmarks with count from Supabase | X-Twitter-ID header |
-| `/api/bookmarks/:id` | DELETE | Delete specific bookmark | X-Twitter-ID header |
-| `/api/bookmarks/:id/category` | PATCH | Update bookmark category | X-Twitter-ID header |
-| `/api/categories` | GET | Fetch all categories with metadata | None (public) |
-| `/api/users/:userId/complete-registration` | POST | Complete user email registration | X-Twitter-ID header |
-
-### Authentication Flow
-
-#### Chrome Extension → Server
-```
-Extension Collection → Twitter User Info → Server Validation → User Creation/Lookup
-```
-- Extension extracts Twitter user info from DOM
-- Sends user data with bookmark payload
-- Server creates or finds existing user in Supabase
-
-#### Client → Server
-```
-Client Request → Twitter ID in Header → User Lookup → Request Processing
-```
-- Client includes `X-Twitter-ID` header
-- Server validates user exists in database
-- Processes request with user context
-
