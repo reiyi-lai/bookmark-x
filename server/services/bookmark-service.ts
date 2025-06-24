@@ -1,6 +1,6 @@
 import { createCategorizer } from './ml-categorizer';
 import { enrichCategoryWithMetadata, type Category, type ImportedBookmark } from '@shared/schema';
-import { supabase } from '../../shared/supabase-client';
+import { supabase } from '../supabase-client';
 
 export interface ProcessedBookmark extends ImportedBookmark {
   categoryId: number;
