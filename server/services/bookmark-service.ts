@@ -1,6 +1,6 @@
 import { createCategorizer } from './ml-categorizer';
 import { createClient } from '@supabase/supabase-js';
-import type { Category, ImportedBookmark } from '@shared/schema';
+import { enrichCategoryWithMetadata, type Category, type ImportedBookmark } from '@shared/schema';
 
 export interface ProcessedBookmark extends ImportedBookmark {
   categoryId: number;
@@ -32,7 +32,12 @@ export class BookmarkService {
       throw new Error(`Failed to fetch categories: ${error.message}`);
     }
     
-    return categories || [];
+    // Enrich categories with metadata and sort by order
+    const enrichedCategories = (categories || [])
+      .map(enrichCategoryWithMetadata)
+      .sort((a, b) => a.order - b.order);
+    
+    return enrichedCategories;
   }
 
   /**

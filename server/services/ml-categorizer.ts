@@ -46,24 +46,31 @@ class KeywordMatcher {
    */
   static getKeywordSets(): Record<string, string[]> {
     return {
-      'quotes': ['"', '"', 'said ', 'says ', 'quote', 'quotes', 'saying', 'wisdom', 'inspirational', 'motivational', 
-                'words', 'phrase', 'proverb', 'famous', 'speech', 'cited', 'told', 'statement', 'words of wisdom'],
-      'automation tools': ['tool', 'automation', 'script', 'app ', 'platform', 'software', 'bot', 'workflow', 'efficiency',
-                          'productivity', 'code', 'programming', 'tech'],
-      'career tips': ['job', 'career', 'work', 'interview', 'resume', 'hire', 'hiring', 'professional', 'promotion',
+      'automation tools': ['built this', 'new tool', 'cool tool', 'automation tool', 'devtool', 'dev tool', 'productivity tool',
+                          'workflow automation', 'zapier', 'github', 'chrome extension', 'browser extension', 'plugin',
+                          'mobile app', 'launched', 'shipped', 'beta', 'product hunt', 'open source'],
+      'career tips': ['job', 'career', 'work', 'interview', 'resume', 'professional', 'promotion',
                      'workplace', 'skills', 'networking', 'leadership', 'management', 'salary', 'negotiation',
-                     'job search', 'cv', 'linkedin', 'professional development', 'mentorship', 'coaching'],
-      'interesting reads': ['read', 'article', 'blog', 'post', 'interesting', 'fascinating', 'story', 'book', 'novel',
-                           'publication', 'magazine', 'journal'],
-      'content ideas': ['idea', 'content', 'blog', 'post', 'article', 'write', 'writing', 'topic', 'inspiration', 'creative', 
-                       'create', 'concept'],
-      'job opportunities': ['hiring', 'looking for', 'seeking', 'recruiting', 'job opening', 'position available', 
-                                  'we are hiring', 'join our team', 'apply now', 'intern', 'internship', 'full-time', 
-                                  'part-time', 'remote', 'on-site', 'contract', 'freelance', 'opportunity', 'vacancy',
-                                  'talent', 'candidate', 'role', 'dm me', 'send resume', 'cv', 'portfolio', 'opening',
-                                  'job search', 'employment', 'work opportunity', 'join us'],
+                     'cv', 'linkedin', 'professional development', 'mentorship', 'coaching'],
+      'personal reads': ['wisdom', 'inspirational', 'motivational', 'speech', 'told', 'statement', 'words of wisdom',
+                        'life', 'thoughts', 'reflection', 'philosophy', 'mindset', 'mental health', 'wellness',
+                        'relationships', 'culture', 'society', 'personal growth', 'self-improvement', 'meditation',
+                        'therapy', 'anxiety', 'depression', 'happiness', 'meaning', 'purpose', 'existential',
+                        'social media', 'internet', 'modern life', 'lifestyle'],
+      'academic research': ['arxiv', 'paper', 'research', 'study', 'publication', 'journal', 'conference', 'neurips', 
+                           'icml', 'iclr', 'aaai', 'acl', 'emnlp', 'transformer', 'neural network', 'deep learning', 'dnn', 'cnn', 'rnn', 'lstm', 'gpt', 'bert',
+                           'llm', 'large language model', 'dataset', 'benchmark', 'evaluation', 'sota', 'state-of-the-art',
+                           'training', 'inference', 'fine-tuning', 'pre-training', 'embedding',
+                           'attention', 'backpropagation', 'gradient', 'optimization', 'loss function', 'overfitting',
+                           'regularization', 'cross-validation', 'hyperparameter', 'academic', 'university', 'phd',
+                           'professor', 'researcher', 'citation', 'peer review', 'whitepaper', 'technical report'],
+      'content ideas': ['content strategy', 'content creation', 'content marketing', 'viral', 'virality', 'launch video',
+                       'marketing strategy', 'growth hack', 'audience building', 'social media strategy',
+                       'content calendar', 'tiktok strategy', 'instagram strategy', 'twitter strategy',
+                       'content tips', 'video ideas', 'post ideas', 'thread ideas'],
+      'job opportunities': ['hiring', 'looking for'],
       'general knowledge': ['fact', 'trivia', 'knowledge', 'learn', 'know', 'education', 'history', 'science', 'culture',
-                           'information', 'data', 'study', 'research', 'discover', 'interesting fact', 'did you know']
+                           'information', 'data', 'discover', 'interesting fact', 'did you know']
     };
   }
 
@@ -304,6 +311,11 @@ Respond with ONLY a JSON object in this exact format:
 Important instructions:
 - Use the exact category names from the list above
 - Index should match the number from the input text
+- For "Job Opportunities": ONLY classify as this if the text contains explicit hiring language like "hiring", "looking for [a person/role]" and is clearly a job posting. Avoid false positives like "looking for advice" or "hiring process discussions"
+- For "Academic Research": Focus on formal research papers, arxiv links, technical AI/ML content, and academic publications
+- For "Personal Reads": Include quotes, life reflections, philosophical content, and personal insights
+- For "Content Ideas": Focus on content strategy, creation tips, viral marketing, launch strategies, creator economy topics, and distribution tactics
+- For "Automation Tools": Focus on "built this" announcements, tool launches, dev tools, productivity apps, and tech product showcases
 - Do not include any text before or after the JSON object`;
         
         const result = await this.client.chatCompletion({
@@ -376,6 +388,13 @@ Important instructions:
 ${categoryList}
 
 Text to categorize: "${text}"
+
+Important guidelines:
+- For "Job Opportunities": ONLY classify as this if the text contains explicit hiring language like "hiring", "looking for [a person/role]" and is clearly a job posting. Avoid false positives like "looking for advice".
+- For "Academic Research": Focus on formal research papers, arxiv links, technical AI/ML content, and academic publications.
+- For "Personal Reads": Include quotes, life reflections, philosophical content, and personal insights.
+- For "Content Ideas": Focus on content strategy, creation tips, viral marketing, launch strategies, creator economy topics, and distribution tactics.
+- For "Automation Tools": Focus on "built this" announcements, tool launches, dev tools, productivity apps, and tech product showcases.
 
 Respond with ONLY the category name, nothing else.`;
   }
@@ -603,49 +622,50 @@ class TfIdfCategorizer extends BaseCategorizer {
    */
   private applyKeywordMatching(text: string, scores: Record<number, number>): Record<number, number> {
     const updatedScores = { ...scores };
+    const lowercaseText = text.toLowerCase();
     
-    // Apply keyword-based scoring
     for (const [categoryName, keywords] of Object.entries(this.keywordSets)) {
-      if (KeywordMatcher.containsKeywords(text, keywords)) {
-        // Find the matching category
-        const category = this.categories.find(c => 
-          c.name.toLowerCase() === categoryName.toLowerCase() ||
-          c.name.toLowerCase().includes(categoryName.toLowerCase()) ||
-          categoryName.toLowerCase().includes(c.name.toLowerCase())
-        );
+      // Special handling for job opportunities - be very strict
+      if (categoryName === 'job opportunities') {
+        const hasHiring = lowercaseText.includes('hiring');
+        const hasLookingFor = lowercaseText.includes('looking for');
         
-        if (category) {
-          // Boost the score for this category
-          updatedScores[category.id] += 3;
-          console.log(`Keyword match found for category: ${category.name}`);
+        if (hasHiring || hasLookingFor) {
+          const falsePositives = [
+            'not hiring', 'stop hiring', 'finished hiring', 'hiring practices', 'hiring bias',
+            'looking for advice', 'looking for ideas', 'looking for help', 'looking for support',
+            'looking for feedback', 'looking for inspiration', 'looking for resources',
+            'looking for tools', 'looking for articles', 'looking for books', 'looking for a job'
+          ];
+          
+          const isFalsePositive = falsePositives.some(phrase => lowercaseText.includes(phrase));
+          
+          if (!isFalsePositive) {
+            const category = this.categories.find(c => 
+              c.name.toLowerCase() === categoryName.toLowerCase()
+            );
+            
+            if (category) {
+              updatedScores[category.id] += 5; // Strong boost for verified job opportunities
+              console.log(`Job opportunity keyword match found: ${hasHiring ? 'hiring' : 'looking for'}`);
+            }
+          } else {
+            console.log(`Job opportunity false positive detected, skipping boost`);
+          }
         }
-      }
-    }
-    
-    // Special case for quotes (check for quotation marks)
-    if (text.includes('"') || text.includes('"') || text.match(/^".*"$/)) {
-      const quoteCategory = this.categories.find(c => 
-        c.name.toLowerCase() === 'quotes' || 
-        c.name.toLowerCase() === 'good quotes'
-      );
-      
-      if (quoteCategory) {
-        updatedScores[quoteCategory.id] += 5; // Strong boost for quotes
-        console.log(`Quotation marks detected, boosting quotes category`);
-      }
-    }
-    
-    // Special case for longer texts (likely interesting reads)
-    if (text.length > 500) {
-      const readsCategory = this.categories.find(c => 
-        c.name.toLowerCase().includes('read') || 
-        c.name.toLowerCase().includes('article') || 
-        c.name.toLowerCase().includes('interesting')
-      );
-      
-      if (readsCategory) {
-        updatedScores[readsCategory.id] += 2; // Moderate boost for longer texts
-        console.log(`Long text detected (${text.length} chars), boosting interesting reads category`);
+      } else {
+        // Regular keyword matching for other categories
+        if (KeywordMatcher.containsKeywords(text, keywords)) {
+          const category = this.categories.find(c => 
+            c.name.toLowerCase() === categoryName.toLowerCase() ||
+            c.name.toLowerCase().includes(categoryName.toLowerCase()) ||
+            categoryName.toLowerCase().includes(c.name.toLowerCase())
+          );
+          
+          if (category) {
+            updatedScores[category.id] += 3; // Add boost for keyword match
+          }
+        }
       }
     }
     

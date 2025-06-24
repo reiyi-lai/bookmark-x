@@ -85,12 +85,12 @@ export interface Category extends DatabaseCategory {
 export const CATEGORY_METADATA: Record<string, { icon: string; order: number }> = {
   "Content Ideas": { icon: "lightbulb", order: 1 },
   "Automation Tools": { icon: "build", order: 2 },
-  "Interesting Reads": { icon: "menu_book", order: 3 },
+  "Personal Reads": { icon: "psychology", order: 3 },
+  "Academic Research": { icon: "science", order: 5 },
   "Career Tips": { icon: "work", order: 4 },
-  "Job Opportunities": { icon: "person_search", order: 5 },
-  "Good Quotes": { icon: "format_quote", order: 6 },
-  "Knowledge/Trivia": { icon: "school", order: 7 },
-  "Uncategorized": { icon: "help_outline", order: 8 }
+  "Job Opportunities": { icon: "person_search", order: 8 },
+  "Knowledge/Trivia": { icon: "school", order: 6 },
+  "Uncategorized": { icon: "help_outline", order: 7 }
 };
 
 export const enrichCategoryWithMetadata = (dbCategory: DatabaseCategory): Category => ({

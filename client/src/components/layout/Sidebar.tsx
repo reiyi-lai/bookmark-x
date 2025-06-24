@@ -106,19 +106,8 @@ export default function Sidebar({
                       : "hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-300"
                   }`}
                 >
-                  <span 
-                    className={`mr-2 flex items-center ${
-                      category.name === "Content Ideas" ? "text-purple-500 dark:text-purple-400" :
-                      category.name === "Automation Tools" ? "text-blue-500 dark:text-blue-400" :
-                      category.name === "Interesting Reads" ? "text-green-500 dark:text-green-400" :
-                      category.name === "Career Tips" ? "text-orange-500 dark:text-orange-400" :
-                      category.name === "Job Opportunities" ? "text-indigo-500 dark:text-indigo-400" :
-                      category.name === "Good Quotes" ? "text-yellow-500 dark:text-yellow-400" :
-                      category.name === "Knowledge/Trivia" ? "text-red-500 dark:text-red-400" :
-                      "text-gray-500 dark:text-gray-400"
-                    }`}
-                  >
-                    {getMaterialIcon(category.icon)}
+                  <span className="mr-2 flex items-center w-0">
+                    {/* Empty space to maintain alignment with "All Bookmarks" */}
                   </span>
                   {category.name}
                   <span className="ml-auto bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full px-2 py-0.5">
