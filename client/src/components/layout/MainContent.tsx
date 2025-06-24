@@ -89,7 +89,7 @@ export default function MainContent({
                 placeholder="Search bookmarks..."
                 value={searchQuery}
                 onChange={handleSearch}
-                className="pl-10 pr-4 py-2 rounded-lg border border-gray-200 dark:border-dark-300 bg-gray-100 dark:bg-dark-300 focus:outline-none focus:ring-2 focus:ring-twitterBlue dark:focus:ring-opacity-50 w-56 transition-colors"
+                className="pl-10 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-twitterBlue dark:focus:ring-opacity-50 w-56 transition-colors"
               />
             </div>
 
