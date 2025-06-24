@@ -10,9 +10,8 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
   const [selectedBookmark, setSelectedBookmark] = useState<Bookmark | null>(null);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
 
-  // Fetch all bookmarks with data that includes category counts
   const {
-    data: bookmarksData = { bookmarks: [], categoryCounts: {} },
+    data: allBookmarks = [],
     isLoading,
     isError,
     refetch
@@ -21,7 +20,7 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
     queryFn: async () => {
       const endpoint = `/api/bookmarks`;
       try {
-        const response = await apiRequest<{ bookmarks: Bookmark[], categoryCounts: Record<number, number> }>({
+        const response = await apiRequest<Bookmark[]>({
           endpoint,
           method: "GET",
           on401: "returnNull",
@@ -40,16 +39,20 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
   
-  // Apply category filtering on the client side
+  // Calculate category counts from all bookmarks
+  const categoryCounts = useMemo(() => {
+    const counts: Record<number, number> = {};
+    allBookmarks.forEach((bookmark: Bookmark) => {
+      counts[bookmark.categoryId] = (counts[bookmark.categoryId] || 0) + 1;
+    });
+    return counts;
+  }, [allBookmarks]);
+
+  // Apply category filtering on client side
   const categoryFilteredBookmarks = useMemo(() => {
-    const allBookmarks = bookmarksData?.bookmarks || [];
-    
-    // If no category selected or categoryId is 0 (All bookmarks), return all bookmarks
     if (!categoryId || categoryId === 0) return allBookmarks;
-    
-    // Otherwise filter by the selected category
-    return allBookmarks.filter(bookmark => bookmark.categoryId === categoryId);
-  }, [bookmarksData?.bookmarks, categoryId]);
+    return allBookmarks.filter((bookmark: Bookmark) => bookmark.categoryId === categoryId);
+  }, [allBookmarks, categoryId]);
   
   // Apply search filtering on category-filtered bookmarks
   const filteredBookmarks = useMemo(() => {
@@ -58,7 +61,7 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
     }
     
     const query = searchQuery.toLowerCase().trim();
-    return categoryFilteredBookmarks.filter(bookmark => {
+    return categoryFilteredBookmarks.filter((bookmark: Bookmark) => {
       return (
         bookmark.content?.toLowerCase().includes(query) ||
         bookmark.authorName?.toLowerCase().includes(query) ||
@@ -66,8 +69,6 @@ export function useBookmarks(categoryId?: number, searchQuery?: string) {
       );
     });
   }, [categoryFilteredBookmarks, searchQuery]);
-  
-  const categoryCounts = bookmarksData?.categoryCounts || {};
 
   // Sync bookmarks (refetch data)
   const { mutate: syncBookmarks, isPending: isSyncing } = useMutation({

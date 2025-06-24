@@ -283,7 +283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // 2. WEB APP ROUTES
   
-  // Get bookmarks with optional filtering and category counts
+  // Get bookmarks data from Supabase and transform for client
   app.get("/api/bookmarks", async (req: Request, res: Response) => {
     try {
       const userId = await getUserFromRequest(req);
@@ -291,7 +291,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "User not authenticated" });
       }
       
-      // Single query to get all bookmark data
       const { data: bookmarksData, error } = await supabase
         .from('bookmarks')
         .select(`
@@ -307,20 +306,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           created_at
         `)
         .eq('user_id', userId)
-        .order('created_at', { ascending: false }); // Order by most recent
+        // .order('created_at', { ascending: false }); // Order by most recent
 
       if (error) {
         console.error("Supabase error:", error);
         return res.status(500).json({ error: "Database error" });
       }
 
-      const categoryCountsMap: Record<number, number> = {};
-      bookmarksData?.forEach(bookmark => {
-        const categoryId = bookmark.category_id;
-        categoryCountsMap[categoryId] = (categoryCountsMap[categoryId] || 0) + 1;
-      });
-
-      // Transform the bookmarks data to match the client interface
+      // Transform bookmarks data to match client interface
       const transformedBookmarks = bookmarksData?.map(bookmark => {
         return {
           id: bookmark.id,
@@ -336,11 +329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }) || [];
       
-      // Return both the filtered bookmarks and category counts
-      res.json({
-        bookmarks: transformedBookmarks,
-        categoryCounts: categoryCountsMap
-      });
+      res.json(transformedBookmarks);
     } catch (error) {
       console.error("Error fetching bookmarks:", error);
       res.status(500).json({ error: "Failed to fetch bookmarks" });
