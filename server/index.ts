@@ -1,9 +1,8 @@
 import dotenv from 'dotenv';
 // Load environment variables FIRST, before any other imports that might use them
-console.log('🔧 Loading environment variables...');
 dotenv.config();
-console.log('🔧 Railway Debug - NODE_ENV:', process.env.NODE_ENV);
-console.log('🔧 Railway Debug - PORT:', process.env.PORT);
+// console.log('🔧 Railway Debug - NODE_ENV:', process.env.NODE_ENV);
+// console.log('🔧 Railway Debug - PORT:', process.env.PORT);
 console.log('🔧 Railway Debug - SUPABASE vars present:', !!process.env.SUPABASE_URL, !!process.env.SUPABASE_SERVICE_ROLE_KEY);
 console.log('🔧 Environment Debug - SUPABASE_URL present:', !!process.env.SUPABASE_URL);
 console.log('🔧 SUPABASE_SERVICE_ROLE_KEY present:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -102,16 +101,16 @@ app.use((req, res, next) => {
   // In development: API-only mode (client will be served by separate Vite dev server)
   // In production: Railway serves API only, Vercel serves frontend
   if (app.get("env") === "development") {
-    console.log('Development: API-only mode (client will be served by Vite dev server)');
+    console.log('Development: API-only mode (client erved by Vite dev server)');
   } else {
     console.log('Production: Railway serves API only, Vercel serves frontend');
   }
 
   // Use Railway's PORT environment variable or fallback to 3002 (to avoid conflicts with other services)
   const port = process.env.PORT || 3001;
-  console.log(`Starting server on port ${port}...`);
+  // console.log(`Starting server on port ${port}...`);
   server.listen(port, () => {
-    log(`serving on port ${port}`);
-    console.log(`✅ Server successfully started on port ${port}`);
+    log(`Server successfully started on port ${port}`);
+    // console.log(`✅ Server successfully started on port ${port}`);
   });
 })();

@@ -424,61 +424,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Recategorize all bookmarks
-  app.post("/api/bookmarks/recategorize", async (req: Request, res: Response) => {
-    try {
-      const userId = await getUserFromRequest(req);
-      if (!userId) {
-        return res.status(401).json({ error: "User not authenticated" });
-      }
+  // app.post("/api/bookmarks/recategorize", async (req: Request, res: Response) => {
+  //   try {
+  //     const userId = await getUserFromRequest(req);
+  //     if (!userId) {
+  //       return res.status(401).json({ error: "User not authenticated" });
+  //     }
       
-      const { data: bookmarks, error: bookmarksError } = await supabase
-        .from('bookmarks')
-        .select('*')
-        .eq('user_id', userId);
+  //     const { data: bookmarks, error: bookmarksError } = await supabase
+  //       .from('bookmarks')
+  //       .select('*')
+  //       .eq('user_id', userId);
 
-      if (bookmarksError || !bookmarks) {
-        throw new Error('Failed to fetch bookmarks');
-      }
+  //     if (bookmarksError || !bookmarks) {
+  //       throw new Error('Failed to fetch bookmarks');
+  //     }
 
-      // Get categories and create categorizer
-      const categories = await BookmarkService.getCategories();
-      const categorizer = createCategorizer(categories);
+  //     // Get categories and create categorizer
+  //     const categories = await BookmarkService.getCategories();
+  //     const categorizer = createCategorizer(categories);
       
-      let updated = 0;
+  //     let updated = 0;
       
-      // Process each bookmark
-      for (const bookmark of bookmarks) {
-        try {
-          const newCategoryId = await categorizer.categorize(bookmark.tweet_content);
+  //     // Process each bookmark
+  //     for (const bookmark of bookmarks) {
+  //       try {
+  //         const newCategoryId = await categorizer.categorize(bookmark.tweet_content);
           
-          if (newCategoryId !== bookmark.category_id) {
-            const { error } = await supabase
-              .from('bookmarks')
-              .update({ category_id: newCategoryId })
-              .eq('id', bookmark.id)
-              .eq('user_id', userId);
+  //         if (newCategoryId !== bookmark.category_id) {
+  //           const { error } = await supabase
+  //             .from('bookmarks')
+  //             .update({ category_id: newCategoryId })
+  //             .eq('id', bookmark.id)
+  //             .eq('user_id', userId);
 
-            if (!error) {
-              updated++;
-            }
-          }
-        } catch (error) {
-          console.error(`Error recategorizing bookmark ${bookmark.id}:`, error);
-        }
-      }
+  //           if (!error) {
+  //             updated++;
+  //           }
+  //         }
+  //       } catch (error) {
+  //         console.error(`Error recategorizing bookmark ${bookmark.id}:`, error);
+  //       }
+  //     }
 
-      res.json({ 
-        success: true, 
-        stats: { 
-          total: bookmarks.length, 
-          updated 
-        } 
-      });
-    } catch (error) {
-      console.error("Error recategorizing bookmarks:", error);
-      res.status(500).json({ error: "Failed to recategorize bookmarks" });
-    }
-  });
+  //     res.json({ 
+  //       success: true, 
+  //       stats: { 
+  //         total: bookmarks.length, 
+  //         updated 
+  //       } 
+  //     });
+  //   } catch (error) {
+  //     console.error("Error recategorizing bookmarks:", error);
+  //     res.status(500).json({ error: "Failed to recategorize bookmarks" });
+  //   }
+  // });
 
   // Create HTTP server
   const httpServer = createServer(app);
