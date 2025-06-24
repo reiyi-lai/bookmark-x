@@ -13,7 +13,7 @@
    ImportedBookmark → ML Categorizer → Supabase Storage
    ```
    - Server receives bulk tweet data
-   - ML categorizer assigns categories using hybrid approach (TF-IDF + DeepSeek API)
+   - ML categorizer assigns categories
    - Processed bookmarks stored in Supabase
    - Data transformed for client consumption
 
@@ -32,7 +32,7 @@
 ### Chrome Extension Routes
 | Endpoint | Method | Purpose | Authentication |
 |----------|--------|---------|----------------|
-| `/api/bookmarks/import` | POST | Bulk import tweets from extension | Twitter ID in payload |
+| `/api/bookmarks/import` | POST | Bulk import tweets from extension + gets categorized tweets from bookmark service and bulk inserts into Supabase | Twitter ID in payload |
 
 ### Web Application Routes
 | Endpoint | Method | Purpose | Authentication |
