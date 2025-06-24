@@ -85,4 +85,36 @@
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
   }
+
+  /* Smooth theme transitions - High Performance */
+  *,
+  *::before,
+  *::after {
+    transition: 
+      background-color 150ms ease-out,
+      border-color 150ms ease-out,
+      color 150ms ease-out,
+      fill 150ms ease-out,
+      stroke 150ms ease-out,
+      box-shadow 150ms ease-out;
+  }
+
+  /* Disable transitions during page load to prevent flashing */
+  .theme-transitioning * {
+    transition: none !important;
+  }
+
+  /* Optimize for elements that change frequently */
+  .bg-background,
+  .bg-card,
+  .bg-popover,
+  .text-foreground,
+  .text-muted-foreground,
+  .border,
+  .border-border {
+    transition: 
+      background-color 120ms ease-out,
+      border-color 120ms ease-out,
+      color 120ms ease-out;
+  }
 }
