@@ -1,7 +1,6 @@
 import natural from 'natural';
 import { removeStopwords } from 'stopword';
 import { Category } from '@shared/schema';
-import { InferenceClient } from '@huggingface/inference';
 
 const { TfIdf } = natural;
 
@@ -209,31 +208,45 @@ abstract class BaseCategorizer implements Categorizer {
 }
 
 /**
- * DeepSeek model-based categorizer
+ * Jan API model-based categorizer (OpenAI compatible)
  */
-class DeepSeekCategorizer extends BaseCategorizer {
+class JanApiCategorizer extends BaseCategorizer {
   private modelId: string;
-  private provider: string;
-  private client: InferenceClient;
+  private apiUrl: string;
+  private apiKey: string;
   
   constructor(categories: Category[], apiKey: string) {
     super(categories);
-    // Use a model that's available through Hugging Face inference providers
-    this.provider = 'novita';
-    this.modelId = 'deepseek-ai/DeepSeek-V3-0324';
-    this.client = new InferenceClient(apiKey);
+    this.modelId = 'gemma3:1b';
+    this.apiUrl = 'http://127.0.0.1:1337/v1/chat/completions';
+    this.apiKey = apiKey || process.env.JAN_API_KEY || 'xkram!1337';
   }
   
+  // Fallback individual categorization
   async categorize(text: string): Promise<number | null> {
     try {
-      console.log('Trying DeepSeek model categorization...');
+      console.log('Trying individual categorization...');
       const prompt = this.createPrompt(text);
       
-      const result = await this.client.chatCompletion({
-        provider: this.provider,
+      const requestBody = {
         model: this.modelId,
         messages: [{ role: 'user', content: prompt }]
+      };
+      
+      const response = await fetch(this.apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify(requestBody)
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
       
       let generatedText = '';
       
@@ -241,10 +254,10 @@ class DeepSeekCategorizer extends BaseCategorizer {
         generatedText = result.choices[0].message.content || '';
       }
       
-      console.log(`DeepSeek model response: ${generatedText}`);
+      // console.log(`Jan API model response: ${generatedText}`);
       
       const predictedCategory = this.parseResponse(generatedText);
-      console.log(`Parsed category: ${predictedCategory}`);
+      // console.log(`Parsed category: ${predictedCategory}`);
       
       // Try to find an exact match first
       const category = this.findCategoryByName(predictedCategory);
@@ -260,10 +273,10 @@ class DeepSeekCategorizer extends BaseCategorizer {
         return partialCategory.id;
       }
       
-      console.log('DeepSeek model did not find a matching category, falling back to TF-IDF');
+      console.log('Jan API model did not find a matching category, falling back to TF-IDF');
       return null;
     } catch (error) {
-      console.error(`Error with DeepSeek model:`, error);
+      console.error(`Error with Jan API model:`, error);
       return null;
     }
   }
@@ -276,7 +289,7 @@ class DeepSeekCategorizer extends BaseCategorizer {
       return [];
     }
 
-    console.log(`DeepSeek batch categorization: processing ${texts.length} texts in chunks of ${BATCH_SIZE}`);
+    console.log(`Jan API batch categorization: processing ${texts.length} texts in chunks of ${BATCH_SIZE}`);
     
     const results: (number | null)[] = [];
     
@@ -295,37 +308,45 @@ class DeepSeekCategorizer extends BaseCategorizer {
           .map((text, index) => `${index + 1}. "${text}"`)
           .join('\n');
         
-        const batchPrompt = `You are a bookmark categorization assistant. Given the following texts, categorize each into one of these categories:
-
+        const systemPrompt = `You are a bookmark categorization assistant. Categorize each text into one of the following categories:
 ${categoryList}
 
-Texts to categorize:
-${numberedTexts}
-
-Respond with ONLY a JSON object in this exact format:
-{
-  "results": [
-    { "index": 1, "category": "Automation Tools" },
-    { "index": 2, "category": "Career Tips" },
-    { "index": 3, "category": "Job Opportunities" }
-  ]
-}
+Respond with ONLY a JSON object in the following example format:
+{"results": [{"index": 1, "category": "Automation Tools"}, {"index": 2, "category": "Career Tips"}, {"index": 3, "category": "Personal Reads"}, {"index": 4, "category": "Content Ideas"}, {"index": 5, "category": "Job Opportunities"}, {"index": 6, "category": "Academic Research"}, {"index": 7, "category": "General Knowledge"}, {"index": 8, "category": "Uncategorized"}, {"index": 9, "category": "Uncategorized"}, {"index": 10, "category": "Uncategorized"}]}
 
 Important instructions:
 - Use the exact category names from the list above
 - Index should match the number from the input text
-- For "Job Opportunities": ONLY classify as this if the text contains explicit hiring language like "hiring", "looking for [a person/role]" and is clearly a job posting. Avoid false positives like "looking for advice" or "hiring process discussions"
-- For "Academic Research": Focus on formal research papers, arxiv links, technical AI/ML content, and academic publications
-- For "Personal Reads": Include quotes, life reflections, philosophical content, and personal insights
-- For "Content Ideas": Focus on content strategy, creation tips, viral marketing, launch strategies, creator economy topics, and distribution tactics
-- For "Automation Tools": Focus on "built this" announcements, tool launches, dev tools, productivity apps, and tech product showcases
-- Do not include any text before or after the JSON object`;
+- For "Job Opportunities": ONLY if explicit hiring language like "hiring", "looking for [person/role]"
+- For "Academic Research": Research papers, arxiv, technical AI/ML content
+- For "Personal Reads": Quotes, reflections, philosophical content
+- For "Content Ideas": Content strategy, creation tips, viral marketing
+- For "Automation Tools": "Built this" announcements, tool launches, dev tools
+- Do not include any text before or after the JSON object;
+`
         
-        const result = await this.client.chatCompletion({
-          provider: this.provider,
+        const requestBody = {
           model: this.modelId,
-          messages: [{ role: 'user', content: batchPrompt }]
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: numberedTexts }
+          ]
+        };
+        
+        const response = await fetch(this.apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiKey}`
+          },
+          body: JSON.stringify(requestBody)
         });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
         
         let generatedText = '';
         
@@ -333,7 +354,7 @@ Important instructions:
           generatedText = result.choices[0].message.content || '';
         }
         
-        console.log(`DeepSeek chunk response: ${generatedText.substring(0, 100)}...`);
+        console.log(`Jan API chunk response: ${generatedText.substring(0, 200)}...`);
         
         const predictedCategories = this.parseBatchResponse(generatedText, chunk.length);
         
@@ -377,7 +398,7 @@ Important instructions:
       }
     }
     
-    console.log(`DeepSeek batch categorization completed: ${results.filter(r => r !== null).length}/${texts.length} successful`);
+    console.log(`Jan API batch categorization completed: ${results.filter(r => r !== null).length}/${texts.length} successful`);
     return results;
   }
   
@@ -404,7 +425,7 @@ Respond with ONLY the category name, nothing else.`;
 
   private parseResponse(response: string): string {
     // Clean up the response
-    console.log("Raw model response:", response);
+    // console.log("Raw model response:", response);
     
     // Mixtral should respond with just the category name, but let's handle other cases too
     const cleanedResponse = response.trim();
@@ -415,7 +436,7 @@ Respond with ONLY the category name, nothing else.`;
   }
 
   private parseBatchResponse(response: string, expectedCount: number): string[] {
-    console.log("Raw batch model response:", response);
+    // console.log("Raw batch model response:", response);
     
     try {
       // Clean up the response - remove any potential markdown code blocks or extra text
@@ -737,13 +758,13 @@ export class MLCategorizer {
   
   constructor(categories: Category[], apiKey: string) {
     // Create the chain of categorizers
-    const deepSeekCategorizer = new DeepSeekCategorizer(categories, apiKey);
+    const janApiCategorizer = new JanApiCategorizer(categories, apiKey);
     const tfIdfCategorizer = new TfIdfCategorizer(categories);
     
     // Set up the chain
-    deepSeekCategorizer.setNext(tfIdfCategorizer);
+    janApiCategorizer.setNext(tfIdfCategorizer);
     
-    this.firstCategorizer = deepSeekCategorizer;
+    this.firstCategorizer = janApiCategorizer;
   }
   
   /**
@@ -775,13 +796,13 @@ export class MLCategorizer {
       return [];
     }
 
-    // Try DeepSeek batch processing first if API key is available
-    const deepSeekCategorizer = this.firstCategorizer as DeepSeekCategorizer;
-    if (deepSeekCategorizer instanceof DeepSeekCategorizer) {
+    // Try Jan API batch processing first if API key is available
+    const janApiCategorizer = this.firstCategorizer as JanApiCategorizer;
+    if (janApiCategorizer instanceof JanApiCategorizer) {
       try {
-        const batchResults = await deepSeekCategorizer.categorizeBatch(texts);
+        const batchResults = await janApiCategorizer.categorizeBatch(texts);
         // If all results are valid, return them
-        if (batchResults.every(result => result !== null)) {
+        if (batchResults.every((result: number | null) => result !== null)) {
           return batchResults as number[];
         }
         
@@ -814,10 +835,10 @@ export class MLCategorizer {
  * Helper function to create a categorizer with given categories
  */
 export function createCategorizer(categories: Category[]): MLCategorizer {
-  const apiKey = process.env.HUGGINGFACE_API_KEY;
+  const apiKey = process.env.JAN_API_KEY;
   
   if (!apiKey) {
-    console.warn('HUGGINGFACE_API_KEY not found in environment variables. Using fallback categorization only.');
+    console.warn('JAN_API_KEY not found in environment variables. Using fallback categorization only.');
     return new MLCategorizer(categories, '');
   }
   
