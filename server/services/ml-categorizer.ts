@@ -5,7 +5,7 @@ import { Category } from '@shared/schema';
 const { TfIdf } = natural;
 
 // Configuration constants
-const BATCH_SIZE = 10; 
+const BATCH_SIZE = 5; 
 
 /**
  * Utility class for keyword matching
@@ -211,15 +211,11 @@ abstract class BaseCategorizer implements Categorizer {
  * Jan API model-based categorizer (OpenAI compatible)
  */
 class JanApiCategorizer extends BaseCategorizer {
-  private modelId: string;
   private apiUrl: string;
-  private apiKey: string;
   
   constructor(categories: Category[], apiKey: string) {
     super(categories);
-    this.modelId = 'gemma3:1b';
-    this.apiUrl = 'http://127.0.0.1:1337/v1/chat/completions';
-    this.apiKey = apiKey || process.env.JAN_API_KEY || 'xkram!1337';
+    this.apiUrl = 'http://127.0.0.1:8000/categorize';
   }
   
   // Fallback individual categorization
@@ -229,15 +225,13 @@ class JanApiCategorizer extends BaseCategorizer {
       const prompt = this.createPrompt(text);
       
       const requestBody = {
-        model: this.modelId,
         messages: [{ role: 'user', content: prompt }]
       };
       
       const response = await fetch(this.apiUrl, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(requestBody)
       });
@@ -311,22 +305,31 @@ class JanApiCategorizer extends BaseCategorizer {
         const systemPrompt = `You are a bookmark categorization assistant. Categorize each text into one of the following categories:
 ${categoryList}
 
-Respond with ONLY a JSON object in the following example format:
-{"results": [{"index": 1, "category": "Automation Tools"}, {"index": 2, "category": "Career Tips"}, {"index": 3, "category": "Personal Reads"}, {"index": 4, "category": "Content Ideas"}, {"index": 5, "category": "Job Opportunities"}, {"index": 6, "category": "Academic Research"}, {"index": 7, "category": "General Knowledge"}, {"index": 8, "category": "Uncategorized"}, {"index": 9, "category": "Uncategorized"}, {"index": 10, "category": "Uncategorized"}]}
+Rules:
+- "Job Opportunities": ONLY if explicit hiring post like "hiring", "looking for <role>"
+- "Academic Research": papers, arxiv, technical content
+- "Personal Reads": quotes, reflections
+- "Content Ideas": marketing hooks, viral videos
+- "Automation Tools": tool launches, dev tools, productivity apps
+- "Knowledge/Trivia": general/political/history/science/tech facts or broad industry knowledge
+- "Uncategorized": anything else
 
-Important instructions:
-- Use the exact category names from the list above
-- Index should match the number from the input text
-- For "Job Opportunities": ONLY if explicit hiring language like "hiring", "looking for [person/role]"
-- For "Academic Research": Research papers, arxiv, technical AI/ML content
-- For "Personal Reads": Quotes, reflections, philosophical content
-- For "Content Ideas": Content strategy, creation tips, viral marketing
-- For "Automation Tools": "Built this" announcements, tool launches, dev tools
-- Do not include any text before or after the JSON object;
-`
+Respond with ONLY JSON format as shown in the following example:
+{"results": [
+{"index": 1, "category": "Automation Tools"}, 
+{"index": 2, "category": "Career Tips"}, 
+{"index": 3, "category": "Personal Reads"}, 
+{"index": 4, "category": "Content Ideas"}, 
+{"index": 5, "category": "Job Opportunities"}, 
+{"index": 6, "category": "Academic Research"}, 
+{"index": 7, "category": "Uncategorized"}, 
+{"index": 8, "category": "Automation Tools"},
+{"index": 9, "category": "Content Ideas"},
+{"index": 10, "category": "Knowledge/Trivia"}.
+
+Do not include any additional text besides the JSON object.`
         
         const requestBody = {
-          model: this.modelId,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: numberedTexts }
@@ -336,8 +339,7 @@ Important instructions:
         const response = await fetch(this.apiUrl, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.apiKey}`
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify(requestBody)
         });
