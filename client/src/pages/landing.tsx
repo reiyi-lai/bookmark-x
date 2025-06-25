@@ -224,7 +224,7 @@ const DashboardPreview = ({ status, isExpanding, onExpand, isMobile }: {
       }
     >
       <img 
-        src="/bookmarkx-preview.png" 
+        src="/bookmarkx-landing.png" 
         alt="Bookmark-X Dashboard" 
         className="w-full h-auto"
       />
