@@ -153,12 +153,12 @@ const TweetCard = ({ tweet, status, isMobile }: {
             }}
           />
         </div>
-        <div>
+        <div className="text-left">
           <div className={`font-bold text-gray-900 ${isMobile ? 'text-sm' : 'text-base'}`}>{tweet.authorName}</div>
           <div className={`text-gray-500 ${isMobile ? 'text-xs' : 'text-sm'}`}>@{tweet.authorUsername}</div>
         </div>
       </div>
-      <div className={`text-gray-800 line-clamp-4 ${isMobile ? 'text-sm leading-5' : 'text-[15px] leading-6'}`}>
+      <div className={`text-gray-800 line-clamp-4 text-left ${isMobile ? 'text-sm leading-5' : 'text-[15px] leading-6'}`}>
         {tweet.content}
       </div>
     </motion.div>
@@ -434,7 +434,7 @@ export default function LandingPage() {
             ease: [0.4, 0, 0.2, 1]
           }}
           style={{
-            backgroundImage: "url('/bookmarkx-preview.png')",
+            backgroundImage: "url('/bookmarkx-landing.png')",
             backgroundSize: "cover",
             backgroundPosition: "center center",
             backgroundRepeat: "no-repeat",
