@@ -1,5 +1,3 @@
-// Chrome extension configuration
-// Detects environment and sets appropriate URLs
 type Environment = 'development' | 'production';
 
 interface Config {
@@ -9,8 +7,7 @@ interface Config {
 }
 
 function detectEnvironment(): Environment {
-  const isDevelopment = false; 
-  
+  const isDevelopment = true; // BUILD_FLAG
   return isDevelopment ? 'development' : 'production';
 }
 
