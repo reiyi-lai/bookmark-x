@@ -477,13 +477,7 @@ interface Category {
 }
 ```
 
-### 3. ProcessedBookmark → Database Storage
-**Location:** `server/routes/index.ts:/api/bookmarks/import`
-- Validates user authentication
-- Processes through BookmarkService.processBookmarks()
-- Stores in Supabase `bookmarks` table
-
-### 4. Database → ClientBookmark
+### 3. DatabaseBookmark → ClientBookmark
 **Location:** `server/routes/index.ts:/api/bookmarks`
 ```typescript
 // Database schema (simplified)
