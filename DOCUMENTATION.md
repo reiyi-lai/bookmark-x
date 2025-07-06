@@ -89,7 +89,7 @@ interface ImportedBookmark {
      - Fetches categories from Supabase `categories` table
      - Initializes ML categorizer with categories
      - Batch categorizes all bookmark texts using ML service
-     - Returns processed bookmarks with assigned `categoryId`
+     - Returns processed bookmarks with assigned `categoryId` (see `## Data Transformations 2.`)
 4. **Duplicate Detection**:
    - Query Supabase `bookmarks` table for existing `tweet_id` values for this user
    - Filter out duplicates from the import batch
@@ -427,13 +427,63 @@ interface ImportedBookmark {
 }
 ```
 
-### 2. ImportedBookmark → Database Storage
+### 2. ImportedBookmark → ProcessedBookmark (ML Categorization)
+**Location:** `server/services/bookmark-service.ts:processBookmarks()`
+
+**Input Format:**
+```typescript
+// Input parameter
+bookmarksData: ImportedBookmark[]
+
+// ImportedBookmark interface
+interface ImportedBookmark {
+  id: string;
+  text: string;
+  author_id: string;
+  created_at: string;
+  media_attachments?: MediaAttachment[] | null;
+  url: string;
+  author: {
+    id: string;
+    name: string;
+    username: string;
+    profile_image_url?: string | null;
+  };
+}
+```
+
+**Output Format:**
+```typescript
+// Return type
+Promise<{
+  bookmarks: ProcessedBookmark[];
+  categories: Category[];
+}>
+
+// ProcessedBookmark interface
+interface ProcessedBookmark extends ImportedBookmark {
+  categoryId: number; // Added by ML categorizer
+}
+
+// Category interface
+interface Category {
+  id: number;
+  name: string;
+  description: string;
+  color: string;
+  created_at: string;
+  icon: string;        // Added by metadata enrichment
+  order: number;       // Added by metadata enrichment
+}
+```
+
+### 3. ProcessedBookmark → Database Storage
 **Location:** `server/routes/index.ts:/api/bookmarks/import`
 - Validates user authentication
-- Processes through ML categorizer
+- Processes through BookmarkService.processBookmarks()
 - Stores in Supabase `bookmarks` table
 
-### 3. Database → ClientBookmark
+### 4. Database → ClientBookmark
 **Location:** `server/routes/index.ts:/api/bookmarks`
 ```typescript
 // Database schema (simplified)
