@@ -147,3 +147,5 @@ npm run build:extension        # Build Chrome extension for production (live URL
 # Database
 npm run supabase:*            # Various Supabase commands
 ```
+
+<!-- Test -->
