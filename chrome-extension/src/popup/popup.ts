@@ -20,14 +20,6 @@ async function checkAuthState() {
       return;
     }
 
-    // Check if user is logged in
-    const response = await chrome.tabs.sendMessage(tab.id!, { type: 'CHECK_TWITTER_AUTH' });
-    
-    if (!response?.isAuthenticated) {
-      showAuthSection('Please sign in to Twitter/X');
-      return;
-    }
-
     // User is authenticated
     if (authSection) authSection.style.display = 'none';
     if (dashboardSection) dashboardSection.style.display = 'block';
