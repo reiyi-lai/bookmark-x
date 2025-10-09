@@ -237,6 +237,7 @@ export default function LandingPage() {
   const animationInterval = isMobile ? MOBILE_ANIMATION_INTERVAL : DESKTOP_ANIMATION_INTERVAL;
   
   const [mounted, setMounted] = useState(false);
+  const [imagesPreloaded, setImagesPreloaded] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [previousIndex, setPreviousIndex] = useState(-1);
   const [transitionInProgress, setTransitionInProgress] = useState(false);
@@ -247,19 +248,30 @@ export default function LandingPage() {
   const carouselRef = useRef<HTMLDivElement>(null);
   const [buttonsLayer, setButtonsLayer] = useState(1000); // Very high z-index for buttons
   
-  // Ensure animations start after component mount
+  // Preload profile images before starting carousel
   useEffect(() => {
+    Promise.all(tweetData.map(tweet => {
+      const img = new Image();
+      img.src = tweet.authorProfileImage;
+      return new Promise(resolve => {
+        img.onload = img.onerror = resolve;
+      });
+    })).then(() => setImagesPreloaded(true));
+  }, []);
+
+  // Start animations after images are preloaded
+  useEffect(() => {
+    if (!imagesPreloaded) return;
     setMounted(true);
-    
-    // Start the carousel after a short delay
+
     const timer = setTimeout(() => {
       if (!carouselStopped) {
         setCurrentIndex(0);
       }
     }, 250);
-    
+
     return () => clearTimeout(timer);
-  }, [carouselStopped]);
+  }, [imagesPreloaded, carouselStopped]);
   
   // Handle carousel transitions
   useEffect(() => {
