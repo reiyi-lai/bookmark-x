@@ -33,9 +33,9 @@ const tweetData = [
 ];
 
 // Animation constants - now responsive
-const DESKTOP_ANIMATION_INTERVAL = 450; // Time between transitions
-const MOBILE_ANIMATION_INTERVAL = 400; // Faster on mobile
-const TRANSITION_DURATION = 350; // Animation duration
+const DESKTOP_ANIMATION_INTERVAL = 515; // Time between transitions
+const MOBILE_ANIMATION_INTERVAL = 475; // Faster on mobile
+const TRANSITION_DURATION = 375; // Animation duration
 const DASHBOARD_EXPAND_DURATION = 1300; // Duration of dashboard expansion
 const BUTTONS_LAYER = 1000;
 
