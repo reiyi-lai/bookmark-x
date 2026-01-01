@@ -9,6 +9,7 @@ export default defineConfig({
         content: path.resolve(__dirname, 'src/content.ts'),
         popup: path.resolve(__dirname, 'src/popup/index.html'),
         'popup-script': path.resolve(__dirname, 'src/popup/popup.ts'),
+        'tweet-collector-injection': path.resolve(__dirname, 'src/tweet-collector-injection.ts'),
       },
       output: {
         entryFileNames: 'js/[name].js',

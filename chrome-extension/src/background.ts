@@ -28,6 +28,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Keep channel open for async response
   }
 
+  if (message.type === 'INJECT_TWEET_COLLECTOR') {
+    handleInjectTweetCollector(sender, sendResponse);
+    return true;
+  }
+
   if (message.type === 'SET_TWITTER_USER') {
     twitterUser = message.data;
     sendResponse({ success: true });
@@ -38,6 +43,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   sendResponse({ error: 'Unknown message type' });
   return;
 });
+
+async function handleInjectTweetCollector(
+  sender: chrome.runtime.MessageSender,
+  sendResponse: (response: any) => void
+) {
+  try {
+    const tabId = sender.tab?.id;
+    if (!tabId) {
+      sendResponse({ success: false, error: 'Missing tab id' });
+      return;
+    }
+
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ['js/tweet-collector-injection.js'],
+      world: 'MAIN',
+    });
+
+    sendResponse({ success: true });
+  } catch (error: unknown) {
+    console.error('Bookmark-X: Failed to inject tweet collector:', error);
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : 'Injection failed',
+    });
+  }
+}
 
 async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (response: any) => void) {
   try {
@@ -114,17 +146,26 @@ async function completeInstallation() {
 // Convert raw tweet data to ImportedBookmark format expected by server
 function processRawTweetData(rawTweet: any): ImportedBookmark | null {
   try {
-    if (!rawTweet.tweetId || !rawTweet.tweetText || !rawTweet.handle || !rawTweet.authorName) {
+    // Allow media-only tweets (tweetText can be empty); we’ll provide a placeholder if needed.
+    if (!rawTweet.tweetId || !rawTweet.handle || !rawTweet.authorName) {
       console.warn('Bookmark-X: Missing required fields:', rawTweet);
+      return null;
+    }
+
+    const hasMedia = rawTweet.media === 'has_media';
+    const rawText = typeof rawTweet.tweetText === 'string' ? rawTweet.tweetText.trim() : '';
+    const text = rawText || (hasMedia ? '[Media-only bookmark]' : '');
+    if (!text) {
+      console.warn('Bookmark-X: Skipping tweet with no text and no media:', rawTweet.tweetId);
       return null;
     }
     
     return {
       id: rawTweet.tweetId,
-      text: rawTweet.tweetText,
+      text,
       author_id: rawTweet.handle,
       created_at: rawTweet.time || new Date().toISOString(),
-      media_attachments: rawTweet.media === 'has_media' ? [{ type: 'detected' }] : null,
+      media_attachments: hasMedia ? [{ type: 'detected' }] : null,
       url: rawTweet.tweetUrl,
       author: {
         id: rawTweet.handle,

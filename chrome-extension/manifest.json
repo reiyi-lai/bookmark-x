@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Bookmark-X - Organize Twitter bookmarks into categories",
-  "version": "1.0.1",
-  "description": "Sort your Twitter bookmarks into categories with our custom ML algorithm. Use our dashboard to streamline your research and reading.",
+  "version": "1.0.3",
+  "description": "Organize your Twitter bookmarks into categories. Access them with your own personalized dashboard.",
   
   "permissions": [
     "storage",
     "activeTab",
-    "tabs"
+    "tabs",
+    "scripting"
   ],
   
   "host_permissions": [
@@ -47,7 +48,7 @@
   
   "web_accessible_resources": [
     {
-      "resources": ["assets/*"],
+      "resources": ["assets/*", "js/tweet-collector-injection.js"],
       "matches": ["https://x.com/*", "https://twitter.com/*"]
     }
   ]

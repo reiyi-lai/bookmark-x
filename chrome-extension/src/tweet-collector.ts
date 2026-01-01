@@ -2,6 +2,10 @@ import { CollectedTweet as Tweet } from '../../shared/schema';
 import { TweetCarousel, createLoadingModal } from './components/modal';
 import { showNotification } from './components/sync-button';
 
+type InjectStatusMessage =
+  | { source: 'bookmark-x'; type: 'BX_COLLECTOR_STATUS'; sessionId: string; active: boolean; totalUnique: number }
+  | { source: 'bookmark-x'; type: 'BX_TWEETS'; sessionId: string; tweets: Tweet[]; totalUnique: number; url: string };
+
 // Extract Twitter user info from the page DOM
 export async function getTwitterUserInfo(): Promise<{ id: string; username: string } | null> {
   try {
@@ -46,6 +50,94 @@ function extractProfilePicture(tweetElement: Element): string {
   return '';
 }
 
+function getScrollContainer(): HTMLElement {
+  return (document.scrollingElement as HTMLElement) || document.documentElement;
+}
+
+async function ensureNetworkCollectorInjected(): Promise<boolean> {
+  try {
+    const resp = await chrome.runtime.sendMessage({ type: 'INJECT_TWEET_COLLECTOR' });
+    return !!resp?.success;
+  } catch (e) {
+    console.warn('Bookmark-X: Failed to request injector:', e);
+    return false;
+  }
+}
+
+async function collectWithNetworkCapture(
+  onTweetCollected?: (tweet: Tweet, totalCount: number) => void
+): Promise<Tweet[]> {
+  const injected = await ensureNetworkCollectorInjected();
+  if (!injected) {
+    console.warn('Bookmark-X: Network collector injection failed; falling back to DOM collector.');
+    return [];
+  }
+
+  // Session-scoped collection
+  const sessionId =
+    (globalThis.crypto && 'randomUUID' in globalThis.crypto)
+      ? (globalThis.crypto as any).randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  const tweetMap = new Map<string, Tweet>();
+  let lastNewAt = Date.now();
+
+  const onMessage = (event: MessageEvent) => {
+    if (event.source !== window) return;
+    const data = event.data as InjectStatusMessage | any;
+    if (!data || data.source !== 'bookmark-x') return;
+    if (data.sessionId !== sessionId) return;
+
+    if (data.type === 'BX_TWEETS' && Array.isArray(data.tweets)) {
+      for (const t of data.tweets) {
+        if (!t?.tweetId) continue;
+        if (tweetMap.has(t.tweetId)) continue;
+        tweetMap.set(t.tweetId, t);
+        lastNewAt = Date.now();
+        onTweetCollected?.(t, tweetMap.size);
+      }
+    }
+  };
+
+  window.addEventListener('message', onMessage);
+
+  // Start capture
+  window.postMessage({ source: 'bookmark-x', type: 'BX_COLLECTOR_START', sessionId }, '*');
+
+  // Speed-first stopping conditions:
+  // - stop after TIME_BUDGET_MS
+  // - or once we have enough to make dashboard useful (TARGET_COUNT)
+  // - or if network goes quiet for QUIET_MS after we’ve collected some minimum
+  const TIME_BUDGET_MS = 25_000;
+  const TARGET_COUNT = 600;
+  const QUIET_MS = 2_000;
+  const MIN_BEFORE_QUIET_STOP = 80;
+
+  const start = Date.now();
+  const scroller = getScrollContainer();
+
+  while (Date.now() - start < TIME_BUDGET_MS && tweetMap.size < TARGET_COUNT) {
+    // If we’ve collected a reasonable amount and network is quiet, stop quickly.
+    if (tweetMap.size >= MIN_BEFORE_QUIET_STOP && Date.now() - lastNewAt > QUIET_MS) break;
+
+    // Aggressive scroll to trigger more network pages.
+    try {
+      scroller.scrollTop = scroller.scrollHeight;
+      scroller.dispatchEvent(new Event('scroll', { bubbles: true }));
+    } catch {
+      window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    // Small pause; network capture will stream results asynchronously.
+    await new Promise(resolve => setTimeout(resolve, 150));
+  }
+
+  window.postMessage({ source: 'bookmark-x', type: 'BX_COLLECTOR_STOP', sessionId }, '*');
+  window.removeEventListener('message', onMessage);
+
+  return Array.from(tweetMap.values());
+}
+
 // Collect tweets with progress callback
 async function collectWithNewTurboMethod(
   timingMilestone: number, 
@@ -56,6 +148,14 @@ async function collectWithNewTurboMethod(
   let consecutiveNoNewTweets = 0;
   let scrollAttempts = 0;
   let reachedMilestone = false;
+
+  // Safety bounds (avoid infinite loops if X stops loading)
+  const MAX_BOOKMARKS = 5000; // remove the old hard cap of 100; keep a high safety cap
+  const MAX_SCROLL_ATTEMPTS = 300;
+  const NO_NEW_TWEETS_LIMIT = 15; // was 8; X often needs more time to load the next batch
+  const POST_SCROLL_WAIT_MS = 175; // was 175; too short for X network/virtualization
+  const SETTLE_POLL_MS = 150;
+  const SETTLE_MAX_MS = 2500;
   
   // Wait for initial tweets to load (up to 10 seconds)
   const startWaitTime = Date.now();
@@ -72,8 +172,46 @@ async function collectWithNewTurboMethod(
   
   console.log('Bookmark-X: Starting tweet collection...');
 
+  function getScrollContainer(): HTMLElement {
+    // Prefer a real scroll container near the tweet list (X sometimes uses nested scrollers)
+    const firstTweet = document.querySelector('[data-testid="tweet"]') as HTMLElement | null;
+    if (firstTweet) {
+      let el: HTMLElement | null = firstTweet.parentElement;
+      while (el) {
+        const style = window.getComputedStyle(el);
+        const overflowY = style.overflowY;
+        const scrollable =
+          (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') &&
+          el.scrollHeight > el.clientHeight + 100;
+        if (scrollable) return el;
+        el = el.parentElement;
+      }
+    }
+
+    // Fallback to the document scroller
+    return (document.scrollingElement as HTMLElement) || document.documentElement;
+  }
+
+  async function waitForSettle(previousTweetCount: number, previousScrollHeight: number): Promise<void> {
+    const start = Date.now();
+    while (Date.now() - start < SETTLE_MAX_MS) {
+      const currentTweetCount = document.querySelectorAll('[data-testid="tweet"]').length;
+      const scroller = getScrollContainer();
+      const scrollHeight = scroller.scrollHeight;
+
+      // Heuristic: if either tweets in DOM increased or scrollHeight changed, content likely loaded
+      if (currentTweetCount > previousTweetCount || scrollHeight !== previousScrollHeight) {
+        return;
+      }
+
+      // If a progress indicator exists, give it time to finish
+      const hasSpinner = document.querySelector('[role="progressbar"], [data-testid="app-bar-loading"], [aria-label="Loading"]');
+      await new Promise(resolve => setTimeout(resolve, hasSpinner ? SETTLE_POLL_MS : SETTLE_POLL_MS));
+    }
+  }
+
   async function simulateVirtualScroll() {
-    const scrollableParent = document.body;
+    const scrollableParent = getScrollContainer();
     
     const tweets = scrollableParent.querySelectorAll('[data-testid="tweet"]');
     if (tweets.length === 0) return false;
@@ -87,7 +225,7 @@ async function collectWithNewTurboMethod(
     //   visibleTweets: tweets.length
     // });
 
-    // Calculate optimal scroll step (about 2-3 screens worth of content)
+    // Calculate scroll step (about 2-3 screens worth of content)
     const viewportHeight = window.innerHeight;
     const scrollStep = Math.min(viewportHeight * 3, 3000);
     const currentScroll = scrollableParent.scrollTop;
@@ -95,6 +233,9 @@ async function collectWithNewTurboMethod(
 
     // Try multiple scroll methods
     try {
+      const prevTweetCount = document.querySelectorAll('[data-testid="tweet"]').length;
+      const prevScrollHeight = scrollableParent.scrollHeight;
+
       // Method 1: Direct scroll
       scrollableParent.scrollTop = targetScroll;
       
@@ -129,13 +270,16 @@ async function collectWithNewTurboMethod(
       console.error('Bookmark-X: Error during scroll:', error);
     }
 
-    // Wait for potential content load
-    await new Promise(resolve => setTimeout(resolve, 175));
+    // Wait for potential content load (X can be slow)
+    const prevTweetCount = document.querySelectorAll('[data-testid="tweet"]').length;
+    const prevScrollHeight = scrollableParent.scrollHeight;
+    await new Promise(resolve => setTimeout(resolve, POST_SCROLL_WAIT_MS));
+    await waitForSettle(prevTweetCount, prevScrollHeight);
 
     return true;
   }
   
-  while (consecutiveNoNewTweets < 8) {
+  while (consecutiveNoNewTweets < NO_NEW_TWEETS_LIMIT && scrollAttempts < MAX_SCROLL_ATTEMPTS) {
     const currentTweetElements = document.querySelectorAll('[data-testid="tweet"]');
     const previousCount = tweetMap.size;
     
@@ -151,51 +295,60 @@ async function collectWithNewTurboMethod(
         if (!tweetId || tweetMap.has(tweetId)) continue;
         
         const textElement = tweetElement.querySelector('[data-testid="tweetText"]');
-        const tweetText = textElement?.textContent || '';
-        
-        if (tweetText) {
-          const authorNameElement = tweetElement.querySelector('[data-testid="User-Name"] [dir="ltr"] span:first-child, [data-testid="User-Name"] span[dir="ltr"]:first-child, [data-testid="User-Name"] > div > div:first-child span');
-          const authorName = authorNameElement?.innerHTML.trim() || '';
-          
+        const rawTweetText = (textElement?.textContent || '').trim();
+
+        const hasMedia = tweetElement.querySelector('[data-testid="tweetPhoto"], [data-testid="videoPlayer"]') !== null;
+        const media = hasMedia ? 'has_media' as const : null;
+
+        // Include media-only bookmarks too (X often has bookmarks with no text)
+        const tweetText = rawTweetText || (hasMedia ? '[Media-only bookmark]' : '');
+        if (!tweetText) continue;
+
+        const authorNameElement = tweetElement.querySelector('[data-testid="User-Name"] [dir="ltr"] span:first-child, [data-testid="User-Name"] span[dir="ltr"]:first-child, [data-testid="User-Name"] > div > div:first-child span');
+        const authorName = authorNameElement?.innerHTML.trim() || '';
+
+        // More reliable: username is the first path segment of /{username}/status/{id}
+        let handle = '';
+        try {
+          const url = new URL(tweetUrl);
+          handle = url.pathname.split('/')[1] || '';
+        } catch {
+          // Fallback
           const linkElement = tweetElement.querySelector('[role="link"]') as HTMLAnchorElement;
-          const handle = linkElement?.href?.split('/').pop() || '';
-          
-          const timeElement = tweetElement.querySelector('time');
-          const time = timeElement?.getAttribute('datetime') || '';
-          
-          const hasMedia = tweetElement.querySelector('[data-testid="tweetPhoto"], [data-testid="videoPlayer"]') !== null;
-          const media = hasMedia ? 'has_media' as const : null;
-          
-          const profilePicture = extractProfilePicture(tweetElement);
-          
-          const tweet: Tweet = {
-            tweetId,
-            tweetUrl,
-            authorName,
-            handle,
-            tweetText,
-            time,
-            profilePicture,
-            media
-          };
-          
-          tweetMap.set(tweetId, tweet);
-          
-          if (onTweetCollected) {
-            onTweetCollected(tweet, tweetMap.size);
-          }
+          handle = linkElement?.href?.split('/').pop() || '';
+        }
 
-          if (tweetMap.size >= 100) {
-            const totalTime = (Date.now() - startTime) / 1000;
-            // console.log(`Bookmark-X: Reached temporary 300 tweet test limit in ${totalTime} seconds`);
-            return Array.from(tweetMap.values());
-          }
+        const timeElement = tweetElement.querySelector('time');
+        const time = timeElement?.getAttribute('datetime') || '';
 
-          if (!reachedMilestone && tweetMap.size >= timingMilestone) {
-            const timeToMilestone = Date.now() - startTime;
-            // console.log(`Bookmark-X: Reached ${timingMilestone} tweets in ${timeToMilestone/1000} seconds`);
-            reachedMilestone = true;
-          }
+        const profilePicture = extractProfilePicture(tweetElement);
+
+        const tweet: Tweet = {
+          tweetId,
+          tweetUrl,
+          authorName,
+          handle,
+          tweetText,
+          time,
+          profilePicture,
+          media
+        };
+
+        tweetMap.set(tweetId, tweet);
+
+        if (onTweetCollected) {
+          onTweetCollected(tweet, tweetMap.size);
+        }
+
+        if (tweetMap.size >= MAX_BOOKMARKS) {
+          console.warn(`Bookmark-X: Reached safety cap of ${MAX_BOOKMARKS} bookmarks; stopping collection to avoid infinite loop.`);
+          return Array.from(tweetMap.values());
+        }
+
+        if (!reachedMilestone && tweetMap.size >= timingMilestone) {
+          const timeToMilestone = Date.now() - startTime;
+          // console.log(`Bookmark-X: Reached ${timingMilestone} tweets in ${timeToMilestone/1000} seconds`);
+          reachedMilestone = true;
         }
       } catch (error) {
         console.error('Bookmark-X: Error processing tweet:', error);
@@ -208,7 +361,7 @@ async function collectWithNewTurboMethod(
       console.log(`Bookmark-X: Found ${newTweetsFound} new tweets (total: ${tweetMap.size})`);
     } else {
       consecutiveNoNewTweets++;
-      console.log(`Bookmark-X: No new tweets found. Consecutive count: ${consecutiveNoNewTweets}/8`);
+      console.log(`Bookmark-X: No new tweets found. Consecutive count: ${consecutiveNoNewTweets}/${NO_NEW_TWEETS_LIMIT}`);
     }
 
     // Try to trigger virtual scroll
@@ -221,7 +374,7 @@ async function collectWithNewTurboMethod(
     scrollAttempts++;
   }
   
-  console.log(`Bookmark-X: Tweet collection completed. Total collected: ${tweetMap.size}`);
+  console.log(`Bookmark-X: Tweet collection completed. Total collected: ${tweetMap.size}. Scroll attempts: ${scrollAttempts}.`);
   return Array.from(tweetMap.values());
 }
 
@@ -250,14 +403,22 @@ export async function handleBulkBookmark() {
     
     // Collect tweets with progress updates
     const startTime = Date.now();
-    const allTweetData = await collectWithNewTurboMethod(1500, startTime, (tweet, count) => {
+    let allTweetData = await collectWithNetworkCapture((tweet, count) => {
       carousel.addTweet(tweet);
-      
-      // Only update progress text at fixed count increments
-      if (count % 3 === 0 || count === 1) {
-        progressText.textContent = `Collecting... ${count} bookmarks`;
+      if (count % 10 === 0 || count === 1) {
+        progressText.textContent = `Collecting... ${count} bookmarks from network capture`;
       }
     });
+
+    // Fallback to DOM collector if network capture got nothing
+    if (allTweetData.length === 0) {
+      allTweetData = await collectWithNewTurboMethod(1500, startTime, (tweet, count) => {
+        carousel.addTweet(tweet);
+        if (count % 3 === 0 || count === 1) {
+          progressText.textContent = `Collecting... ${count} bookmarks from DOM collector`;
+        }
+      });
+    }
     
     if (allTweetData.length === 0) {
       showNotification('No tweets found to bookmark', 'error');
@@ -274,8 +435,12 @@ export async function handleBulkBookmark() {
     });
     
     // Show final status for 2 seconds before removing modal
-    progressText.textContent = response.success 
-      ? `Successfully organized ${response.processedCount} tweets!`
+    const collectedCount = allTweetData.length;
+    const processedCount = response.processedCount ?? 0;
+    const skippedCount = Math.max(0, collectedCount - processedCount);
+
+    progressText.textContent = response.success
+      ? `Collected ${collectedCount}. Saved ${processedCount}${skippedCount ? ` (skipped ${skippedCount} duplicates)` : ''}.`
       : `Oops! ${response.error}`;
     
     setTimeout(() => {
