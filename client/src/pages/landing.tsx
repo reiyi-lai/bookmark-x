@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 
 // Tweet card data from CSV
@@ -37,26 +37,36 @@ const DESKTOP_ANIMATION_INTERVAL = 450; // Time between transitions
 const MOBILE_ANIMATION_INTERVAL = 400; // Faster on mobile
 const TRANSITION_DURATION = 350; // Animation duration
 const DASHBOARD_EXPAND_DURATION = 1300; // Duration of dashboard expansion
+const BUTTONS_LAYER = 1000;
 
-// Custom hook for mobile detection
 const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(max-width: 767px)").matches;
+  });
 
   useEffect(() => {
-    const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 768); // md breakpoint
-    };
+    const mql = window.matchMedia("(max-width: 767px)");
+    const onChange = (e?: MediaQueryListEvent) => setIsMobile(e?.matches ?? mql.matches);
 
-    checkIsMobile();
-    window.addEventListener('resize', checkIsMobile);
-    return () => window.removeEventListener('resize', checkIsMobile);
+    onChange();
+
+    // Safari < 14
+    if (typeof (mql as any).addEventListener === "function") {
+      mql.addEventListener("change", onChange);
+      return () => mql.removeEventListener("change", onChange);
+    }
+    // eslint-disable-next-line deprecation/deprecation
+    (mql as any).addListener(onChange);
+    // eslint-disable-next-line deprecation/deprecation
+    return () => (mql as any).removeListener(onChange);
   }, []);
 
   return isMobile;
 };
 
 // Animated background bookmark card component
-const BookmarkCard = ({ delay, rotate, scale, x, y }: { 
+const BookmarkCard = memo(({ delay, rotate, scale, x, y }: { 
   delay: number; 
   rotate: number; 
   scale: number; 
@@ -99,31 +109,25 @@ const BookmarkCard = ({ delay, rotate, scale, x, y }: {
       </div>
     </motion.div>
   );
-};
+});
+BookmarkCard.displayName = "BookmarkCard";
 
 // Tweet card component for the carousel
-const TweetCard = ({ tweet, status, isMobile }: { 
+type CarouselStatus = "entering" | "active" | "exiting" | "inactive";
+
+const TWEET_CARD_ANIMATION_BY_STATUS: Record<CarouselStatus, { opacity: number; x: string; scale: number }> = {
+  entering: { opacity: 1, x: "-50%", scale: 1 },
+  active: { opacity: 1, x: "-50%", scale: 1 },
+  exiting: { opacity: 0, x: "-150%", scale: 0.8 },
+  inactive: { opacity: 0, x: "50%", scale: 0.8 },
+};
+
+const TweetCard = memo(({ tweet, status, isMobile }: { 
   tweet: typeof tweetData[0]; 
-  status: 'entering' | 'active' | 'exiting' | 'inactive';
+  status: CarouselStatus;
   isMobile: boolean;
 }) => {
-  // Determine animation properties based on status
-  let position = {};
-  
-  switch (status) {
-    case 'entering':
-      position = { opacity: 1, x: "-50%", scale: 1 };
-      break;
-    case 'active':
-      position = { opacity: 1, x: "-50%", scale: 1 };
-      break;
-    case 'exiting':
-      position = { opacity: 0, x: "-150%", scale: 0.8 };
-      break;
-    case 'inactive':
-      position = { opacity: 0, x: "50%", scale: 0.8 };
-      break;
-  }
+  const position = TWEET_CARD_ANIMATION_BY_STATUS[status];
 
   return (
     <motion.div
@@ -145,6 +149,8 @@ const TweetCard = ({ tweet, status, isMobile }: {
             src={tweet.authorProfileImage}
             alt={tweet.authorName}
             className="w-full h-full object-cover"
+            loading="eager"
+            decoding="async"
             onError={(e) => {
               // Fallback if image fails to load
               const target = e.target as HTMLImageElement;
@@ -163,48 +169,33 @@ const TweetCard = ({ tweet, status, isMobile }: {
       </div>
     </motion.div>
   );
-};
+});
+TweetCard.displayName = "TweetCard";
 
 // Dashboard preview component
-const DashboardPreview = ({ status, isExpanding, onExpand, isMobile }: { 
-  status: 'entering' | 'active' | 'exiting' | 'inactive';
+const DASHBOARD_ANIMATION_BY_STATUS: Record<CarouselStatus, { opacity: number; x: string; scale: number; zIndex: number }> = {
+  entering: { opacity: 1, x: "-50%", scale: 1, zIndex: 10 },
+  active: { opacity: 1, x: "-50%", scale: 1, zIndex: 10 },
+  exiting: { opacity: 0, x: "-150%", scale: 0.8, zIndex: 5 },
+  inactive: { opacity: 0, x: "50%", scale: 0.8, zIndex: 1 },
+};
+
+const DashboardPreview = memo(({ status, isExpanding, onExpand, isMobile }: { 
+  status: CarouselStatus;
   isExpanding: boolean;
   onExpand: () => void;
   isMobile: boolean;
 }) => {
-  // Determine animation properties based on status
-  let position = {};
-  
-  if (isExpanding) {
-    // When expanding, we'll animate this component to full screen first
-    // then trigger the background expansion and fade this out
-    position = { 
-      opacity: [1, 0],
-      x: "-50%",
-      scale: [1, 1.2],
-      zIndex: 10
-    };
-    
-    // Trigger the background expansion with a slight delay
-    setTimeout(() => {
-      onExpand();
-    }, 10);
-  } else {
-    switch (status) {
-      case 'entering':
-        position = { opacity: 1, x: "-50%", scale: 1, zIndex: 10 };
-        break;
-      case 'active':
-        position = { opacity: 1, x: "-50%", scale: 1, zIndex: 10 };
-        break;
-      case 'exiting':
-        position = { opacity: 0, x: "-150%", scale: 0.8, zIndex: 5 };
-        break;
-      case 'inactive':
-        position = { opacity: 0, x: "50%", scale: 0.8, zIndex: 1 };
-        break;
-    }
-  }
+  // Trigger background expansion as side effect (never during render)
+  useEffect(() => {
+    if (!isExpanding) return;
+    const t = window.setTimeout(() => onExpand(), 10);
+    return () => window.clearTimeout(t);
+  }, [isExpanding, onExpand]);
+
+  const position = isExpanding
+    ? { opacity: [1, 0], x: "-50%", scale: [1, 1.2], zIndex: 10 }
+    : DASHBOARD_ANIMATION_BY_STATUS[status];
 
   return (
     <motion.div
@@ -227,100 +218,101 @@ const DashboardPreview = ({ status, isExpanding, onExpand, isMobile }: {
         src="/bookmarkx-landing.png" 
         alt="Bookmark-X Dashboard" 
         className="w-full h-auto"
+        loading="eager"
+        decoding="async"
       />
     </motion.div>
   );
-};
+});
+DashboardPreview.displayName = "DashboardPreview";
 
 export default function LandingPage() {
   const isMobile = useIsMobile();
   const animationInterval = isMobile ? MOBILE_ANIMATION_INTERVAL : DESKTOP_ANIMATION_INTERVAL;
   
   const [mounted, setMounted] = useState(false);
-  const [imagesPreloaded, setImagesPreloaded] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [previousIndex, setPreviousIndex] = useState(-1);
-  const [transitionInProgress, setTransitionInProgress] = useState(false);
+  const transitionInProgressRef = useRef(false);
+  const transitionTimerRef = useRef<number | null>(null);
   const [dashboardExpanded, setDashboardExpanded] = useState(false);
   const [showBackground, setShowBackground] = useState(false);
   const [carouselStopped, setCarouselStopped] = useState(false);
   const [backgroundFullyExpanded, setBackgroundFullyExpanded] = useState(false);
-  const carouselRef = useRef<HTMLDivElement>(null);
-  const [buttonsLayer, setButtonsLayer] = useState(1000); // Very high z-index for buttons
-  
-  // Preload profile images before starting carousel
+
+  // Render animations on first mount
   useEffect(() => {
-    Promise.all(tweetData.map(tweet => {
-      const img = new Image();
-      img.src = tweet.authorProfileImage;
-      return new Promise(resolve => {
-        img.onload = img.onerror = resolve;
-      });
-    })).then(() => setImagesPreloaded(true));
+    const raf = window.requestAnimationFrame(() => setMounted(true));
+    return () => window.cancelAnimationFrame(raf);
   }, []);
 
-  // Start animations after images are preloaded
+  // Close timers on unmount
   useEffect(() => {
-    if (!imagesPreloaded) return;
-    setMounted(true);
-
-    const timer = setTimeout(() => {
-      if (!carouselStopped) {
-        setCurrentIndex(0);
+    return () => {
+      if (transitionTimerRef.current) {
+        window.clearTimeout(transitionTimerRef.current);
+        transitionTimerRef.current = null;
       }
-    }, 250);
+    };
+  }, []);
 
-    return () => clearTimeout(timer);
-  }, [imagesPreloaded, carouselStopped]);
+  // Start carousel shortly after mount
+  useEffect(() => {
+    if (carouselStopped) return;
+    const timer = window.setTimeout(() => setCurrentIndex(0), 250);
+    return () => window.clearTimeout(timer);
+  }, [carouselStopped]);
   
   // Handle carousel transitions
   useEffect(() => {
     if (currentIndex === -1 || carouselStopped) return;
-    
-    const interval = setInterval(() => {
-      if (!transitionInProgress) {
-        setTransitionInProgress(true);
-        setPreviousIndex(currentIndex);
-        
-        // Move to next item or stay on dashboard
-        setCurrentIndex(prev => {
-          return prev < tweetData.length ? prev + 1 : prev;
-        });
-        
-        // Reset transition state after animation completes
-        setTimeout(() => {
-          setTransitionInProgress(false);
-          
-          // If we've reached the dashboard, trigger expansion immediately
-          if (currentIndex === tweetData.length) {
-            setDashboardExpanded(true);
-            // Stop the carousel once dashboard is expanded
-            setCarouselStopped(true);
-          }
-        }, TRANSITION_DURATION);
+
+    const timer = window.setTimeout(() => {
+      if (transitionInProgressRef.current) return;
+
+      transitionInProgressRef.current = true;
+      setPreviousIndex(currentIndex);
+
+      const nextIndex = currentIndex < tweetData.length ? currentIndex + 1 : currentIndex;
+      setCurrentIndex(nextIndex);
+
+      // Reset transition state after animation
+      if (transitionTimerRef.current) {
+        window.clearTimeout(transitionTimerRef.current);
       }
+      transitionTimerRef.current = window.setTimeout(() => {
+        transitionInProgressRef.current = false;
+
+        // Expand dashboard and stop carousel on end of tweet cards
+        if (nextIndex === tweetData.length) {
+          setDashboardExpanded(true);
+          setCarouselStopped(true);
+        }
+      }, TRANSITION_DURATION);
     }, animationInterval);
-    
-    return () => clearInterval(interval);
-  }, [currentIndex, transitionInProgress, carouselStopped]);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [animationInterval, carouselStopped, currentIndex]);
 
   // Get card status based on indices
-  const getCardStatus = (index: number) => {
+  const getCardStatus = useCallback((index: number): CarouselStatus => {
     if (index === currentIndex) return 'entering';
     if (index === previousIndex) return 'exiting';
     if (index < currentIndex) return 'inactive';
     return 'inactive';
-  };
+  }, [currentIndex, previousIndex]);
 
   // Handle dashboard expansion
-  const handleDashboardExpand = () => {
+  const handleDashboardExpand = useCallback(() => {
     setShowBackground(true);
     
     // Mark background as fully expanded after animation completes
-    setTimeout(() => {
+    window.setTimeout(() => {
       setBackgroundFullyExpanded(true);
     }, DASHBOARD_EXPAND_DURATION);
-  };
+  }, []);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black">
@@ -347,7 +339,6 @@ export default function LandingPage() {
         {/* Tweet Carousel and Dashboard Preview */}
         <div 
           className={`w-full max-w-4xl relative mb-0 ${isMobile ? 'h-[200px]' : 'h-[300px]'}`} 
-          ref={carouselRef} 
           style={{ pointerEvents: "none" }}
         >
           {/* Render all tweet cards with appropriate status */}
@@ -370,7 +361,7 @@ export default function LandingPage() {
         </div>
 
         {/* CTA Buttons - Positioned with highest z-index but keeping original layout */}
-        <div className="relative" style={{ zIndex: buttonsLayer, pointerEvents: "auto" }}>
+        <div className="relative" style={{ zIndex: BUTTONS_LAYER, pointerEvents: "auto" }}>
           <motion.div 
             className="flex flex-col sm:flex-row gap-3 md:gap-4 items-center px-4"
             initial={{ y: isMobile ? 5 : 15, opacity: 1 }}
