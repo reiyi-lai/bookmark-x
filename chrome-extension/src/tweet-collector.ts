@@ -4,6 +4,7 @@ import { showNotification } from './components/sync-button';
 
 type InjectStatusMessage =
   | { source: 'bookmark-x'; type: 'BX_COLLECTOR_STATUS'; sessionId: string; active: boolean; totalUnique: number }
+  | { source: 'bookmark-x'; type: 'BX_COLLECTOR_CAPTURE'; sessionId: string; url: string; extracted: number; newUnique: number; totalUnique: number }
   | { source: 'bookmark-x'; type: 'BX_TWEETS'; sessionId: string; tweets: Tweet[]; totalUnique: number; url: string };
 
 // Extract Twitter user info from the page DOM
@@ -51,6 +52,20 @@ function extractProfilePicture(tweetElement: Element): string {
 }
 
 function getScrollContainer(): HTMLElement {
+  // Try to find the actual scrollable ancestor near the timeline (X often uses nested scrollers).
+  const firstTweet = document.querySelector('[data-testid="tweet"]') as HTMLElement | null;
+  if (firstTweet) {
+    let el: HTMLElement | null = firstTweet.parentElement;
+    while (el) {
+      const style = window.getComputedStyle(el);
+      const overflowY = style.overflowY;
+      const scrollable =
+        (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') &&
+        el.scrollHeight > el.clientHeight + 100;
+      if (scrollable) return el;
+      el = el.parentElement;
+    }
+  }
   return (document.scrollingElement as HTMLElement) || document.documentElement;
 }
 
@@ -65,7 +80,8 @@ async function ensureNetworkCollectorInjected(): Promise<boolean> {
 }
 
 async function collectWithNetworkCapture(
-  onTweetCollected?: (tweet: Tweet, totalCount: number) => void
+  onTweetCollected?: (tweet: Tweet, totalCount: number) => void,
+  onDebug?: (debug: { responsesSeen: number; lastUrl: string; lastExtracted: number; lastNewUnique: number; totalUnique: number }) => void
 ): Promise<Tweet[]> {
   const injected = await ensureNetworkCollectorInjected();
   if (!injected) {
@@ -81,6 +97,8 @@ async function collectWithNetworkCapture(
 
   const tweetMap = new Map<string, Tweet>();
   let lastNewAt = Date.now();
+  let responsesSeen = 0;
+  let lastUrl = '';
 
   const onMessage = (event: MessageEvent) => {
     if (event.source !== window) return;
@@ -88,7 +106,21 @@ async function collectWithNetworkCapture(
     if (!data || data.source !== 'bookmark-x') return;
     if (data.sessionId !== sessionId) return;
 
+    if (data.type === 'BX_COLLECTOR_CAPTURE') {
+      responsesSeen += 1;
+      lastUrl = typeof data.url === 'string' ? data.url : '';
+      onDebug?.({
+        responsesSeen,
+        lastUrl,
+        lastExtracted: Number(data.extracted || 0),
+        lastNewUnique: Number(data.newUnique || 0),
+        totalUnique: Number(data.totalUnique || tweetMap.size),
+      });
+      return;
+    }
+
     if (data.type === 'BX_TWEETS' && Array.isArray(data.tweets)) {
+      lastUrl = typeof data.url === 'string' ? data.url : lastUrl;
       for (const t of data.tweets) {
         if (!t?.tweetId) continue;
         if (tweetMap.has(t.tweetId)) continue;
@@ -122,10 +154,12 @@ async function collectWithNetworkCapture(
 
     // Aggressive scroll to trigger more network pages.
     try {
-      scroller.scrollTop = scroller.scrollHeight;
+      // Scroll in a couple smaller steps; tends to trigger more consistent paging than one giant jump.
+      const step = Math.min(window.innerHeight * 2, 2500);
+      scroller.scrollTop = Math.min(scroller.scrollTop + step, scroller.scrollHeight);
       scroller.dispatchEvent(new Event('scroll', { bubbles: true }));
     } catch {
-      window.scrollTo(0, document.body.scrollHeight);
+      window.scrollTo(0, Math.min(window.scrollY + window.innerHeight * 2, document.body.scrollHeight));
     }
 
     // Small pause; network capture will stream results asynchronously.
@@ -403,15 +437,23 @@ export async function handleBulkBookmark() {
     
     // Collect tweets with progress updates
     const startTime = Date.now();
+    progressText.textContent = 'Collecting... (initializing network capture)';
+
     let allTweetData = await collectWithNetworkCapture((tweet, count) => {
       carousel.addTweet(tweet);
       if (count % 10 === 0 || count === 1) {
         progressText.textContent = `Collecting... ${count} bookmarks from network capture`;
       }
+    }, (dbg) => {
+      // Update occasionally so we don’t spam layout; show we’re actually seeing GraphQL responses.
+      if (dbg.responsesSeen % 2 === 0 && dbg.totalUnique === 0) {
+        progressText.textContent = `Collecting... (network) saw ${dbg.responsesSeen} responses, extracted ${dbg.lastExtracted}`;
+      }
     });
 
     // Fallback to DOM collector if network capture got nothing
     if (allTweetData.length === 0) {
+      progressText.textContent = 'Network capture returned 0; falling back to DOM collector...';
       allTweetData = await collectWithNewTurboMethod(1500, startTime, (tweet, count) => {
         carousel.addTweet(tweet);
         if (count % 3 === 0 || count === 1) {

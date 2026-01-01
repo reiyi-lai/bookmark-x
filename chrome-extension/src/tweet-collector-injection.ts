@@ -44,6 +44,16 @@
     totalUnique: number;
   };
 
+  type CaptureMessage = {
+    source: "bookmark-x";
+    type: "BX_COLLECTOR_CAPTURE";
+    sessionId: string;
+    url: string;
+    extracted: number; // tweets extracted from this payload (before dedupe)
+    newUnique: number; // new unique tweets added from this payload
+    totalUnique: number;
+  };
+
   type TweetsMessage = {
     source: "bookmark-x";
     type: "BX_TWEETS";
@@ -53,13 +63,18 @@
     url: string;
   };
 
-  const post = (msg: StatusMessage | TweetsMessage) => {
+  const post = (msg: StatusMessage | TweetsMessage | CaptureMessage) => {
     window.postMessage(msg, "*");
   };
 
   let active = false;
   let sessionId: string | null = null;
   const seenTweetIds = new Set<string>();
+  // Buffer a few recent matching payloads so if the page loads bookmarks BEFORE the user hits Sync,
+  // we can still process those immediately after BX_COLLECTOR_START.
+  const prebuffer: { ts: number; url: string; json: any }[] = [];
+  const PREBUFFER_MAX = 10;
+  const PREBUFFER_TTL_MS = 15_000;
 
   const BOOKMARKS_URL_RE = /\/i\/api\/graphql\/[^/]+\/Bookmarks/i;
 
@@ -147,6 +162,14 @@
 
   function extractTweetsFromGraphQLPayload(payload: any): CollectedTweet[] {
     const tweets: CollectedTweet[] = [];
+    const seenLocal = new Set<string>();
+
+    const pushTweet = (t: CollectedTweet | null) => {
+      if (!t?.tweetId) return;
+      if (seenLocal.has(t.tweetId)) return;
+      seenLocal.add(t.tweetId);
+      tweets.push(t);
+    };
 
     const timeline =
       pick(payload, ["data", "bookmark_timeline_v2", "timeline"]) ||
@@ -161,16 +184,14 @@
     const visitEntry = (entry: any) => {
       const itemContent = entry?.content?.itemContent;
       const tweetResults = itemContent?.tweet_results?.result;
-      const tweet = extractTweetFromResult(tweetResults);
-      if (tweet) tweets.push(tweet);
+      pushTweet(extractTweetFromResult(tweetResults));
 
       // Some entries contain modules with nested items
       const moduleItems = entry?.content?.items;
       if (Array.isArray(moduleItems)) {
         for (const mi of moduleItems) {
           const tr = mi?.item?.itemContent?.tweet_results?.result;
-          const t = extractTweetFromResult(tr);
-          if (t) tweets.push(t);
+          pushTweet(extractTweetFromResult(tr));
         }
       }
     };
@@ -184,15 +205,62 @@
       for (const entry of entries) visitEntry(entry);
     }
 
+    // Fallback: schema-agnostic deep scan for tweet_results anywhere in the payload.
+    // This is resilient to X schema changes and A/B tests.
+    if (tweets.length === 0) {
+      const MAX_NODES = 50_000;
+      let visited = 0;
+
+      const walk = (node: any) => {
+        if (!node || visited >= MAX_NODES) return;
+        visited++;
+
+        if (Array.isArray(node)) {
+          for (const item of node) walk(item);
+          return;
+        }
+
+        if (typeof node !== "object") return;
+
+        if ((node as any).tweet_results?.result) {
+          pushTweet(extractTweetFromResult((node as any).tweet_results.result));
+        }
+        if ((node as any).itemContent?.tweet_results?.result) {
+          pushTweet(extractTweetFromResult((node as any).itemContent.tweet_results.result));
+        }
+
+        for (const v of Object.values(node)) walk(v);
+      };
+
+      walk(payload);
+    }
+
     return tweets;
   }
 
-  function handleCapturedJson(url: string, json: any) {
+  function onCapturedJson(url: string, json: any) {
+    // Always buffer the most recent payloads (very small ring buffer).
+    const now = Date.now();
+    prebuffer.push({ ts: now, url, json });
+    while (prebuffer.length > PREBUFFER_MAX) prebuffer.shift();
+
     if (!active || !sessionId) return;
     if (!json || typeof json !== "object") return;
 
     const extracted = extractTweetsFromGraphQLPayload(json);
-    if (extracted.length === 0) return;
+    const extractedCount = extracted.length;
+    if (extractedCount === 0) {
+      post({
+        source: "bookmark-x",
+        type: "BX_COLLECTOR_CAPTURE",
+        sessionId,
+        url,
+        extracted: 0,
+        newUnique: 0,
+        totalUnique: seenTweetIds.size,
+      });
+      return;
+    }
 
     const newTweets: CollectedTweet[] = [];
     for (const t of extracted) {
@@ -203,6 +271,16 @@
     }
 
     if (newTweets.length === 0) return;
+
+    post({
+      source: "bookmark-x",
+      type: "BX_COLLECTOR_CAPTURE",
+      sessionId,
+      url,
+      extracted: extractedCount,
+      newUnique: newTweets.length,
+      totalUnique: seenTweetIds.size,
+    });
 
     // Send in manageable batches
     const BATCH_SIZE = 50;
@@ -231,7 +309,7 @@
         // Process async so we never block the page response.
         Promise.resolve()
           .then(() => cloned.json())
-          .then((json) => handleCapturedJson(String(url), json))
+          .then((json) => onCapturedJson(String(url), json))
           .catch(() => {
             // ignore parse errors
           });
@@ -254,18 +332,26 @@
   XMLHttpRequest.prototype.send = function (this: XMLHttpRequest, ...args: any[]) {
     this.addEventListener("loadend", () => {
       try {
-        if (!active || !sessionId) return;
         const url = (this as any).__bx_url;
         if (!url || !isBookmarksGraphQLUrl(String(url))) return;
 
-        const text = (this.responseType === "" || this.responseType === "text")
-          ? (this.responseText || "")
-          : "";
-        if (!text) return;
+        // XHR may use responseType="json", in which case responseText is empty.
+        const rt = this.responseType;
+        let json: any | null = null;
 
-        const json = safeJsonParse(text);
+        if (rt === "json") {
+          const resp = (this as any).response;
+          if (resp && typeof resp === "object") json = resp;
+        } else {
+          const text =
+            rt === "" || rt === "text"
+              ? (this.responseText || "")
+              : (typeof (this as any).response === "string" ? (this as any).response : "");
+          if (text) json = safeJsonParse(text);
+        }
+
         if (!json) return;
-        handleCapturedJson(String(url), json);
+        onCapturedJson(String(url), json);
       } catch {
         // ignore
       }
@@ -278,6 +364,16 @@
     sessionId = nextSessionId;
     if (active) {
       seenTweetIds.clear();
+      // Flush recent buffered payloads immediately on start (best-effort).
+      const now = Date.now();
+      const recent = prebuffer.filter((p) => now - p.ts <= PREBUFFER_TTL_MS);
+      for (const p of recent) {
+        try {
+          onCapturedJson(p.url, p.json);
+        } catch {
+          // ignore
+        }
+      }
     }
     post({
       source: "bookmark-x",
