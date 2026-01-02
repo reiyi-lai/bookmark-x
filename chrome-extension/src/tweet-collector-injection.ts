@@ -385,7 +385,8 @@
   }
 
   window.addEventListener("message", (event: MessageEvent) => {
-    if (event.source !== window) return;
+    // Don't rely on strict `event.source` equality across isolated/MAIN worlds.
+    if (event.origin && event.origin !== window.location.origin) return;
     const data = event.data as StartMessage | StopMessage | any;
     if (!data || data.source !== "bookmark-x") return;
 
