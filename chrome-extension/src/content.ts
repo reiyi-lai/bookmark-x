@@ -1,5 +1,5 @@
 import { addSyncButton } from './components/sync-button';
-import { handleBulkBookmark } from './tweet-collector';
+import { handleBulkBookmark, ensureCollectorInjected } from './tweet-collector';
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initializeBookmarkBuddy);
@@ -8,25 +8,31 @@ if (document.readyState === 'loading') {
 }
 
 async function initializeBookmarkBuddy() {
-  // Check if this is a fresh installation
+  // Inject the MAIN world collector early on the bookmarks page
+  // so it can prebuffer GraphQL responses before the user clicks sync
+  if (window.location.pathname.includes('/i/bookmarks')) {
+    ensureCollectorInjected();
+  }
+
   const { isNewInstall } = await chrome.storage.local.get(['isNewInstall']);
-  
+
   if (isNewInstall) {
     await handleBulkBookmark();
   }
-  
-  // addSyncButton() handles check for x.com bookmarks page
+
   addSyncButton();
-  
+
   setupUrlWatcher();
 }
 
 function setupUrlWatcher() {
-  // Watch for URL changes to re-add sync button
   let currentUrl = window.location.href;
   const urlObserver = new MutationObserver(() => {
     if (window.location.href !== currentUrl) {
       currentUrl = window.location.href;
+      if (currentUrl.includes('/i/bookmarks')) {
+        ensureCollectorInjected();
+      }
       setTimeout(addSyncButton, 500);
     }
   });

@@ -9,10 +9,8 @@ let twitterUser: { id: string; username: string } | null = null;
 // Listen for extension installation
 chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === 'install') {
-    // console.log('Bookmark-X: Extension installed, opening bookmarks page...');
-    
     await chrome.storage.local.set({ isNewInstall: true });
-    
+
     await chrome.tabs.create({
       url: 'https://twitter.com/i/bookmarks'
     });
@@ -21,15 +19,8 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 
 // Handle messages from content script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  // console.log('Bookmark-X: Received message:', message.type);
-
   if (message.type === 'PROCESS_TWEET_JSON_BULK') {
     handleProcessTweetJSONBulk(message.data, sendResponse);
-    return true; // Keep channel open for async response
-  }
-
-  if (message.type === 'INJECT_TWEET_COLLECTOR') {
-    handleInjectTweetCollector(sender, sendResponse);
     return true;
   }
 
@@ -39,59 +30,60 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return;
   }
 
+  if (message.type === 'INJECT_COLLECTOR_SCRIPT') {
+    handleInjectCollectorScript(sender, sendResponse);
+    return true;
+  }
+
   console.warn('Bookmark-X: Unknown message type:', message.type);
   sendResponse({ error: 'Unknown message type' });
   return;
 });
 
-async function handleInjectTweetCollector(
+async function handleInjectCollectorScript(
   sender: chrome.runtime.MessageSender,
   sendResponse: (response: any) => void
 ) {
   try {
     const tabId = sender.tab?.id;
     if (!tabId) {
-      sendResponse({ success: false, error: 'Missing tab id' });
+      sendResponse({ success: false, error: 'No tab ID available' });
       return;
     }
 
     await chrome.scripting.executeScript({
       target: { tabId },
-      files: ['js/tweet-collector-injection.js'],
       world: 'MAIN',
+      files: ['js/tweet-collector-injection.js']
     });
 
+    console.log('Bookmark-X: Injected collector script into tab', tabId);
     sendResponse({ success: true });
   } catch (error: unknown) {
-    console.error('Bookmark-X: Failed to inject tweet collector:', error);
+    console.error('Bookmark-X: Failed to inject collector script:', error);
     sendResponse({
       success: false,
-      error: error instanceof Error ? error.message : 'Injection failed',
+      error: error instanceof Error ? error.message : 'Injection failed'
     });
   }
 }
 
 async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (response: any) => void) {
   try {
-    // console.log(`Bookmark-X: Processing ${rawTweetData.length} raw tweets for user: ${twitterUser?.username}`);
-    
-    // Ensure we have Twitter user info
     if (!twitterUser) {
       throw new Error('Twitter user info not available');
     }
-    
-    // Convert and filter tweets
+
     const bookmarks = rawTweetData
       .map(processRawTweetData)
       .filter(bookmark => bookmark !== null);
-    
+
     if (bookmarks.length === 0) {
       throw new Error('No valid tweets to import');
     }
-    
+
     console.log(`Bookmark-X: Sending ${bookmarks.length} bookmarks to server...`);
-    
-    // Send to server for ML categorization and storage
+
     const response = await fetch(`${config.apiUrl}/api/bookmarks/import`, {
       method: 'POST',
       headers: {
@@ -102,25 +94,24 @@ async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (re
         twitterUser: twitterUser
       })
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Server request failed: ${response.status} - ${errorText}`);
     }
-    
+
     const result = await response.json();
     const processedCount = result.stats?.imported || result.stats?.total || bookmarks.length;
-    
+
     console.log(`Bookmark-X: Successfully processed ${processedCount} bookmarks`);
-    
-    // Mark installation as complete and redirect
+
     await completeInstallation();
-    
+
     sendResponse({
       success: true,
       processedCount: processedCount
     });
-    
+
   } catch (error: unknown) {
     console.error('Bookmark-X: Error processing tweets:', error);
     sendResponse({
@@ -131,22 +122,18 @@ async function handleProcessTweetJSONBulk(rawTweetData: any[], sendResponse: (re
 }
 
 async function completeInstallation() {
-  // Clear the installation flag
   await chrome.storage.local.remove(['isNewInstall']);
-  
-  // Redirect to main site with twitter user ID
+
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab.id) {
-    await chrome.tabs.update(tab.id, { 
+    await chrome.tabs.update(tab.id, {
       url: `${config.frontendUrl}?source=extension&twitter_id=${twitterUser!.id}`
     });
   }
 }
 
-// Convert raw tweet data to ImportedBookmark format expected by server
 function processRawTweetData(rawTweet: any): ImportedBookmark | null {
   try {
-    // Allow media-only tweets (tweetText can be empty); we’ll provide a placeholder if needed.
     if (!rawTweet.tweetId || !rawTweet.handle || !rawTweet.authorName) {
       console.warn('Bookmark-X: Missing required fields:', rawTweet);
       return null;
@@ -159,7 +146,7 @@ function processRawTweetData(rawTweet: any): ImportedBookmark | null {
       console.warn('Bookmark-X: Skipping tweet with no text and no media:', rawTweet.tweetId);
       return null;
     }
-    
+
     return {
       id: rawTweet.tweetId,
       text,
