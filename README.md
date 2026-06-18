@@ -1,6 +1,6 @@
 # Bookmark-X - Twitter Bookmark Organizer
 
-Chrome extension that automatically organizes your Twitter/X bookmarks into categories using AI-powered classification (OpenAI API).
+Chrome extension that automatically organizes your Twitter/X bookmarks into categories via OpenAI API.
 
 ## Project Structure
 
@@ -18,8 +18,7 @@ Bookmark-X/
 - **Frontend**: React, Vite, TailwindCSS, Radix UI
 - **Backend**: Express.js, TypeScript
 - **Database**: Supabase (PostgreSQL)
-- **AI**: OpenAI GPT-4o-mini (batch categorization)
-- **Hosting**: Vercel (frontend), Railway (API)
+- **AI**: OpenAI API (GPT-4o-mini)
 
 ## Setup
 
