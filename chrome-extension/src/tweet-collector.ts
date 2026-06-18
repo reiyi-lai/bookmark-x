@@ -90,6 +90,8 @@ export async function ensureCollectorInjected(): Promise<boolean> {
 }
 
 
+const MAX_BOOKMARKS = 350;
+
 async function collectWithNetworkCapture(
   onTweetCollected?: (tweet: Tweet, totalCount: number) => void,
 ): Promise<Tweet[]> {
@@ -126,6 +128,11 @@ async function collectWithNetworkCapture(
           if (!collected.has(tweet.tweetId)) {
             collected.set(tweet.tweetId, tweet);
             onTweetCollected?.(tweet, collected.size);
+            if (collected.size >= MAX_BOOKMARKS) {
+              console.log(`Bookmark-X: Reached ${MAX_BOOKMARKS} cap, stopping collection`);
+              cleanup();
+              return;
+            }
           }
         }
       }
@@ -194,8 +201,6 @@ async function collectWithNewTurboMethod(
   let scrollAttempts = 0;
   let reachedMilestone = false;
 
-  // Safety bounds (avoid infinite loops if X stops loading)
-  const MAX_BOOKMARKS = 350;
   const MAX_SCROLL_ATTEMPTS = 300;
   const NO_NEW_TWEETS_LIMIT = 15; // was 8; X often needs more time to load the next batch
   const POST_SCROLL_WAIT_MS = 175; 
