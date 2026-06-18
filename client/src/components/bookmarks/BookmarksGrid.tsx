@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import type { ClientBookmark as Bookmark } from "@shared/schema";
 import BookmarkCard from "./BookmarkCard";
 import { Skeleton } from "../ui/skeleton";
@@ -14,38 +14,26 @@ export default function BookmarksGrid({
   bookmarks,
   isLoading,
   onChangeCategory,
-  // onDeleteBookmark
+  onDeleteBookmark
 }: BookmarksGridProps) {
-  // Local state to track deleted bookmarks (frontend only)
-  const [deletedBookmarkIds, setDeletedBookmarkIds] = useState<Set<string>>(new Set());
-
-  // Filter out locally deleted bookmarks - memoize this to avoid recalculation on every render
-  const visibleBookmarks = useMemo(() => {
-    return bookmarks.filter(bookmark => !deletedBookmarkIds.has(bookmark.id));
-  }, [bookmarks, deletedBookmarkIds]);
-
-  // Handle local deletion
-  const handleLocalDelete = (bookmarkId: string) => {
-    setDeletedBookmarkIds(prev => new Set([...prev, bookmarkId]));
-  };
 
   // Create memoized callbacks for each bookmark to prevent unnecessary re-renders
   const changeCallbacks = useMemo(() => {
     const callbacks: Record<string, () => void> = {};
-    visibleBookmarks.forEach(bookmark => {
+    bookmarks.forEach(bookmark => {
       callbacks[bookmark.id] = () => onChangeCategory(bookmark);
     });
     return callbacks;
-  }, [visibleBookmarks, onChangeCategory]);
+  }, [bookmarks, onChangeCategory]);
 
   // Create memoized delete callbacks
   const deleteCallbacks = useMemo(() => {
     const callbacks: Record<string, () => void> = {};
-    visibleBookmarks.forEach(bookmark => {
-      callbacks[bookmark.id] = () => handleLocalDelete(bookmark.id);
+    bookmarks.forEach(bookmark => {
+      callbacks[bookmark.id] = () => onDeleteBookmark?.(bookmark.id);
     });
     return callbacks;
-  }, [visibleBookmarks]);
+  }, [bookmarks, onDeleteBookmark]);
 
   if (isLoading) {
     return (
@@ -77,7 +65,7 @@ export default function BookmarksGrid({
     );
   }
 
-  if (visibleBookmarks.length === 0) {
+  if (bookmarks.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <div className="rounded-full bg-muted p-3 mb-3">
@@ -106,7 +94,7 @@ export default function BookmarksGrid({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {visibleBookmarks.map((bookmark) => (
+      {bookmarks.map((bookmark) => (
         <BookmarkCard
           key={bookmark.id}
           bookmark={bookmark}
