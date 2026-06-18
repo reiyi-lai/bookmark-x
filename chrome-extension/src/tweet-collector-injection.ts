@@ -136,12 +136,28 @@
     const userResult =
       pick(normalized, ["core", "user_results", "result"]) ||
       pick(normalized, ["tweet", "core", "user_results", "result"]) ||
+      pick(normalized, ["core", "user_result", "result"]) ||
       {};
-    const userLegacy = userResult.legacy || {};
-    const handle: string = (userLegacy.screen_name || "").toString();
-    const authorName: string = (userLegacy.name || "").toString();
-    const profilePicture: string =
-      (userLegacy.profile_image_url_https || userLegacy.profile_image_url || "").toString();
+    // user_results.result can have another nested .result for protected/verified accounts
+    const userLegacy = userResult.legacy || userResult.result?.legacy || {};
+
+    const handle: string = (
+      userLegacy.screen_name ||
+      userResult.core?.screen_name ||
+      ""
+    ).toString();
+    const authorName: string = (
+      userLegacy.name ||
+      userResult.core?.name ||
+      ""
+    ).toString();
+    const rawPic = (
+      userLegacy.profile_image_url_https ||
+      userLegacy.profile_image_url ||
+      userResult.avatar?.image_url ||
+      ""
+    ).toString();
+    const profilePicture: string = rawPic || (handle ? `https://unavatar.io/twitter/${handle}` : "");
 
     const mediaEntities =
       pick(legacy, ["extended_entities", "media"]) ||
