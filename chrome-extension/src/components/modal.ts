@@ -45,11 +45,11 @@ export class TweetCarousel {
       left: 50%;
       top: 0;
       transform: translateX(50%) scale(0.8);
-      width: 500px;
-      min-height: 250px;
+      width: 460px;
+      min-height: 210px;
       background: white;
-      border-radius: 16px;
-      padding: 50px;
+      border-radius: 14px;
+      padding: 36px 46px;
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       transition: all ${this.TRANSITION_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1);
       opacity: 0;
@@ -68,10 +68,10 @@ export class TweetCarousel {
     const avatar = document.createElement('img');
     avatar.src = tweet.profilePicture;
     avatar.style.cssText = `
-      width: 48px;
-      height: 48px;
-      border-radius: 24px;
-      margin-right: 12px;
+      width: 40px;
+      height: 40px;
+      border-radius: 20px;
+      margin-right: 10px;
     `;
 
     const authorInfo = document.createElement('div');
@@ -84,7 +84,7 @@ export class TweetCarousel {
     authorName.textContent = cleanTwitterHtml(tweet.authorName);
     authorName.style.cssText = `
       font-weight: 700;
-      font-size: 16px;
+      font-size: 15px;
       color: #0f172a;
     `;
 
@@ -207,8 +207,7 @@ export function createLoadingModal() {
     perspective: 1000px;
     /* Contain absolutely positioned children */
     overflow: visible;
-    /* Add padding to ensure space for progress text */
-    padding-bottom: 30px;
+    padding-bottom: 50px;
   `;
 
   const progressText = document.createElement('div');
