@@ -1,7 +1,8 @@
 import OpenAI from 'openai';
 import { Category } from '@shared/schema';
 
-const BATCH_SIZE = 10;
+const BATCH_SIZE = 20;
+const CONCURRENCY = 3;
 
 function buildCategoryList(categories: Category[]): string {
   return categories
@@ -31,12 +32,12 @@ class OpenAICategorizer {
     return `You are a bookmark categorization assistant. Categorize each text into one of the following categories:
 ${this.categoryList}
 
-Rules:
-- "Job Opportunities": ONLY if explicit hiring language like "hiring", "looking for [role]"
-- "Academic Research": Research papers, arxiv, technical AI/ML content
-- "Personal Reads": Quotes, reflections, philosophical content
-- "Content Ideas": Content strategy, creation tips, viral marketing
-- "Automation Tools": Tool launches, dev tools, "built this" announcements
+Priority rules (check in this order):
+1. "Job Opportunities" — ANY mention of hiring, recruiting, open roles, or job posts. Keywords: "hiring", "we're hiring", "looking for", "open positions", "join our team", "apply", "role", "engineers". This should be the first category checked before all other categories — a tweet about hiring engineers is a job opportunity, not a tool or research post.
+2. "Academic Research" — Research papers, arxiv, technical AI/ML content, studies
+3. "Personal Reads" — Quotes, reflections, philosophical content, life advice
+4. "Content Ideas" — Content strategy, creation tips, viral marketing, audience building
+5. "Automation Tools" — Automation or AI workflows, dev tools, technical tool launches, "built this" announcements, product showcases
 - Use the exact category names from the list above
 - When in doubt, use "Uncategorized"`;
   }
@@ -68,37 +69,52 @@ Rules:
   async categorizeBatch(texts: string[]): Promise<number[]> {
     if (texts.length === 0) return [];
 
-    console.log(`OpenAI batch categorization: ${texts.length} texts in chunks of ${BATCH_SIZE}`);
-    const results: number[] = [];
+    const totalChunks = Math.ceil(texts.length / BATCH_SIZE);
+    console.log(`OpenAI batch categorization: ${texts.length} texts, ${totalChunks} chunks, concurrency ${CONCURRENCY}`);
 
+    // Split into chunks with their original index
+    const chunks: { idx: number; texts: string[] }[] = [];
     for (let i = 0; i < texts.length; i += BATCH_SIZE) {
-      const chunk = texts.slice(i, i + BATCH_SIZE);
-      console.log(`Processing chunk ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(texts.length / BATCH_SIZE)}`);
+      chunks.push({ idx: i, texts: texts.slice(i, i + BATCH_SIZE) });
+    }
 
-      try {
-        const numberedTexts = chunk
-          .map((text, idx) => `${idx + 1}. "${text}"`)
-          .join('\n');
+    const results: number[] = new Array(texts.length).fill(this.getDefaultCategoryId());
 
-        const response = await this.client.responses.create({
-          model: 'gpt-4o-mini',
-          instructions: this.systemPrompt() + `\n\nRespond with ONLY a JSON object like:
+    // Process chunks with limited concurrency
+    let next = 0;
+    const processNext = async (): Promise<void> => {
+      while (next < chunks.length) {
+        const chunkIndex = next++;
+        const chunk = chunks[chunkIndex];
+        console.log(`Processing chunk ${chunkIndex + 1}/${totalChunks}`);
+
+        try {
+          const numberedTexts = chunk.texts
+            .map((text, idx) => `${idx + 1}. "${text}"`)
+            .join('\n');
+
+          const response = await this.client.responses.create({
+            model: 'gpt-4o-mini',
+            instructions: this.systemPrompt() + `\n\nIMPORTANT REMINDER: Before assigning ANY category, first check if the tweet indicates someone is hiring, recruiting, open roles, job posts, "we're hiring", "looking for", "join our team", or similar. If yes, categorize as "Job Opportunities" regardless of other content.
+
+Respond with ONLY a JSON object like:
 {"results": [{"index": 1, "category": "Category Name"}, ...]}
 Do not include any text before or after the JSON.`,
-          input: numberedTexts,
-        });
+            input: numberedTexts,
+          });
 
-        const chunkIds = this.parseBatchResponse(response.output_text.trim(), chunk.length);
-        results.push(...chunkIds);
-
-        if (i + BATCH_SIZE < texts.length) {
-          await new Promise(r => setTimeout(r, 100));
+          console.log(`Chunk ${chunkIndex + 1} raw response:`, response.output_text.trim().substring(0, 500));
+          const chunkIds = this.parseBatchResponse(response.output_text.trim(), chunk.texts.length);
+          for (let j = 0; j < chunkIds.length; j++) {
+            results[chunk.idx + j] = chunkIds[j];
+          }
+        } catch (err) {
+          console.error(`OpenAI chunk ${chunkIndex + 1} error:`, err);
         }
-      } catch (err) {
-        console.error(`OpenAI chunk ${Math.floor(i / BATCH_SIZE) + 1} error:`, err);
-        results.push(...new Array(chunk.length).fill(this.getDefaultCategoryId()));
       }
-    }
+    };
+
+    await Promise.all(Array.from({ length: CONCURRENCY }, () => processNext()));
 
     console.log(`OpenAI batch done: ${results.length}/${texts.length} categorized`);
     return results;
