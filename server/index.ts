@@ -1,15 +1,10 @@
 import dotenv from 'dotenv';
 // Load environment variables FIRST, before any other imports that might use them
 dotenv.config();
-// console.log('🔧 Railway Debug - NODE_ENV:', process.env.NODE_ENV);
-// console.log('🔧 Railway Debug - PORT:', process.env.PORT);
-console.log('🔧 Railway Debug - SUPABASE vars present:', !!process.env.SUPABASE_URL, !!process.env.SUPABASE_SERVICE_ROLE_KEY);
-console.log('🔧 Environment Debug - SUPABASE_URL present:', !!process.env.SUPABASE_URL);
-console.log('🔧 SUPABASE_SERVICE_ROLE_KEY present:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, log } from "./vite";
+import { log } from "./vite";
 import cors from 'cors';
 
 const app = express();
@@ -86,9 +81,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  console.log('🚀 Starting server setup...');
   const server = await registerRoutes(app);
-  console.log('✅ Routes registered successfully');
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -100,17 +93,8 @@ app.use((req, res, next) => {
 
   // In development: API-only mode (client will be served by separate Vite dev server)
   // In production: Railway serves API only, Vercel serves frontend
-  if (app.get("env") === "development") {
-    console.log('Development: API-only mode (client erved by Vite dev server)');
-  } else {
-    console.log('Production: Railway serves API only, Vercel serves frontend');
-  }
-
-  // Use Railway's PORT environment variable or fallback to 3002 (to avoid conflicts with other services)
   const port = process.env.PORT || 3001;
-  // console.log(`Starting server on port ${port}...`);
   server.listen(port, () => {
-    log(`Server successfully started on port ${port}`);
-    // console.log(`✅ Server successfully started on port ${port}`);
+    log(`Server started on port ${port}`);
   });
 })();

@@ -11,11 +11,9 @@
 (() => {
   const GLOBAL_KEY = "__BOOKMARK_X_COLLECTOR_INJECTED__";
   if ((window as any)[GLOBAL_KEY]) {
-    console.log('Bookmark-X Injection: Already injected, skipping');
     return;
   }
   (window as any)[GLOBAL_KEY] = true;
-  console.log('Bookmark-X Injection: Script loaded and running in MAIN world');
 
   type CollectedTweet = {
     tweetId: string;
@@ -297,7 +295,6 @@
       // Keep everything except variables (we'll set that per-page)
       parsed.searchParams.delete("variables");
       capturedBaseUrl = parsed.toString();
-      console.log("Bookmark-X Injection: Captured request template for direct pagination");
     } catch {}
   }
 
@@ -342,7 +339,6 @@
 
   async function runDirectPagination() {
     if (!active || !sessionId || !capturedBaseUrl) return;
-    console.log("Bookmark-X Injection: Starting direct cursor pagination");
     let cursor: string | null = null;
     let consecutiveEmpty = 0;
     const MAX_PAGES = 200;
@@ -354,7 +350,6 @@
       if (cursor) break;
     }
     if (!cursor) {
-      console.log("Bookmark-X Injection: No cursor found, cannot paginate directly");
       return;
     }
 
@@ -366,7 +361,6 @@
       const nextCursor = extractCursor(result.json);
 
       if (!nextCursor || nextCursor === cursor) {
-        console.log("Bookmark-X Injection: No more pages (cursor exhausted)");
         break;
       }
 
@@ -384,7 +378,6 @@
       await new Promise(r => setTimeout(r, 150));
     }
 
-    console.log(`Bookmark-X Injection: Direct pagination done. ${page} pages fetched.`);
     // Signal content script that pagination is complete
     if (sessionId) {
       window.postMessage({
@@ -402,23 +395,13 @@
     prebuffer.push({ ts: now, url, json });
     while (prebuffer.length > PREBUFFER_MAX) prebuffer.shift();
     
-    console.log(`Bookmark-X Injection: onCapturedJson called - active: ${active}, sessionId: ${sessionId}, url:`, url.substring(0, 100));
-
-    if (!active || !sessionId) {
-      console.log('Bookmark-X Injection: Not active or no sessionId, buffering only');
-      return;
-    }
-    if (!json || typeof json !== "object") {
-      console.log('Bookmark-X Injection: Invalid JSON, skipping');
-      return;
-    }
+    if (!active || !sessionId) return;
+    if (!json || typeof json !== "object") return;
 
     const extracted = extractTweetsFromGraphQLPayload(json);
     const extractedCount = extracted.length;
-    console.log(`Bookmark-X Injection: Extracted ${extractedCount} tweets from GraphQL payload`);
-    
+
     if (extractedCount === 0) {
-      console.log('Bookmark-X Injection: No tweets extracted from this payload');
       post({
         source: "bookmark-x",
         type: "BX_COLLECTOR_CAPTURE",
@@ -469,8 +452,6 @@
   // Hook XHR — wrap onreadystatechange to read response BEFORE X.com's handler
   const originalOpen = XMLHttpRequest.prototype.open;
   const originalSend = XMLHttpRequest.prototype.send;
-  console.log('Bookmark-X Injection: XHR hook installed');
-
   XMLHttpRequest.prototype.open = function (this: XMLHttpRequest, method: string, url: string | URL, ...rest: any[]) {
     (this as any).__bx_url = String(url);
     return (originalOpen as any).apply(this, [method, url, ...rest]);
@@ -489,7 +470,6 @@
       resp.text().then((text: string) => {
         const json = safeJsonParse(text);
         if (json) {
-          console.log(`Bookmark-X Injection: ✅ Got JSON from XHR blob (${resp.size} bytes)`);
           onCapturedJson((xhr as any).__bx_url || "", json);
         }
       }).catch(() => {});
@@ -520,18 +500,8 @@
       xhr.onreadystatechange = function (ev: Event) {
         if (!captured && xhr.readyState === 4 && xhr.status === 200) {
           captured = true;
-          console.log(`Bookmark-X Injection: ✅ XHR Bookmarks readyState=4:`, {
-            url: url.substring(0, 150),
-            responseType: xhr.responseType,
-            responseTextLen: (() => { try { return xhr.responseText.length; } catch { return -1; } })(),
-            responseKind: xhr.response === null ? 'null' : xhr.response?.constructor?.name || typeof xhr.response,
-            responseSize: xhr.response instanceof Blob ? xhr.response.size :
-                          xhr.response instanceof ArrayBuffer ? xhr.response.byteLength :
-                          typeof xhr.response === 'string' ? xhr.response.length : '?',
-          });
           const json = tryExtractXhrJson(xhr);
           if (json) {
-            console.log(`Bookmark-X Injection: ✅ Got JSON from XHR Bookmarks response!`);
             captureRequestTemplate(url);
             onCapturedJson(url, json);
           }
@@ -542,7 +512,6 @@
       xhr.addEventListener("load", () => {
         if (!captured && xhr.status === 200) {
           captured = true;
-          console.log(`Bookmark-X Injection: ✅ XHR Bookmarks load event fallback`);
           const json = tryExtractXhrJson(xhr);
           if (json) onCapturedJson(url, json);
         }
@@ -554,13 +523,10 @@
   function setActive(nextActive: boolean, nextSessionId: string) {
     active = nextActive;
     sessionId = nextSessionId;
-    console.log(`Bookmark-X Injection: setActive called - active: ${nextActive}, sessionId: ${nextSessionId}`);
     if (active) {
       seenTweetIds.clear();
-      // Flush recent buffered payloads immediately on start (best-effort).
       const now = Date.now();
       const recent = prebuffer.filter((p) => now - p.ts <= PREBUFFER_TTL_MS);
-      console.log(`Bookmark-X Injection: Flushing ${recent.length} buffered payloads`);
       for (const p of recent) {
         try {
           onCapturedJson(p.url, p.json);
@@ -587,7 +553,6 @@
     console.log('Bookmark-X Injection: Received message:', data.type, data);
 
     if (data.type === "BX_COLLECTOR_START" && typeof data.sessionId === "string") {
-      console.log('Bookmark-X Injection: START command received');
       if (activityInterval) clearInterval(activityInterval);
       setActive(true, data.sessionId);
 
@@ -595,27 +560,21 @@
         if (!active) {
           clearInterval(activityInterval!);
           activityInterval = null;
-          return;
         }
-        console.log(`Bookmark-X Injection: Network activity - ${seenTweetIds.size} unique tweets collected`);
       }, 3000);
 
       return;
     }
 
     if (data.type === "BX_COLLECTOR_FETCH_PAGES" && typeof data.sessionId === "string") {
-      console.log("Bookmark-X Injection: FETCH_PAGES command received");
       runDirectPagination();
       return;
     }
 
     if (data.type === "BX_COLLECTOR_STOP" && typeof data.sessionId === "string") {
-      console.log(`Bookmark-X Injection: STOP - ${seenTweetIds.size} unique tweets collected`);
       if (activityInterval) { clearInterval(activityInterval); activityInterval = null; }
       setActive(false, data.sessionId);
       return;
     }
   });
-  
-  console.log('Bookmark-X Injection: Message listener installed, ready to receive commands');
 })();

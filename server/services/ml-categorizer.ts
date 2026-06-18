@@ -86,7 +86,6 @@ Priority rules (check in this order):
       while (next < chunks.length) {
         const chunkIndex = next++;
         const chunk = chunks[chunkIndex];
-        console.log(`Processing chunk ${chunkIndex + 1}/${totalChunks}`);
 
         try {
           const numberedTexts = chunk.texts
@@ -103,7 +102,6 @@ Do not include any text before or after the JSON.`,
             input: numberedTexts,
           });
 
-          console.log(`Chunk ${chunkIndex + 1} raw response:`, response.output_text.trim().substring(0, 500));
           const chunkIds = this.parseBatchResponse(response.output_text.trim(), chunk.texts.length);
           for (let j = 0; j < chunkIds.length; j++) {
             results[chunk.idx + j] = chunkIds[j];

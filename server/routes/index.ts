@@ -69,41 +69,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         stats.categorized[category.id] = 0;
       });
 
-      // Batch check for duplicates to improve performance
-      const tweetIds = processedBookmarks.map(bookmark => bookmark.id);
-      
-      const { data: existingBookmarks } = await supabase
-        .from('bookmarks')
-        .select('tweet_id')
-        .eq('user_id', userId)
-        .in('tweet_id', tweetIds);
-
-      const existingTweetIds = new Set(
-        existingBookmarks?.map(b => b.tweet_id) || []
-      );
-
-      // Filter out duplicates
-      const newBookmarks = processedBookmarks.filter(
-        bookmark => !existingTweetIds.has(bookmark.id)
-      );
-
-      if (newBookmarks.length === 0) {
-        return res.json({ 
-          success: true, 
-          stats: {
-            total: processedBookmarks.length,
-            imported: 0,
-            categorized: {}
-          },
-          userId: userId,
-          message: "All bookmarks already exist"
-        });
-      }
-
-      console.log(`Importing ${newBookmarks.length} new bookmarks (${existingTweetIds.size} duplicates skipped)`);
-
-      // Prepare all bookmark data for batch insert
-      const bookmarkDataArray = newBookmarks.map(bookmark => ({
+      // Prepare all bookmark data for upsert (insert or update category on conflict)
+      const bookmarkDataArray = processedBookmarks.map(bookmark => ({
         tweet_id: bookmark.id,
         tweet_url: bookmark.url,
         tweet_content: bookmark.text,
@@ -120,19 +87,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const DB_BATCH_SIZE = 500;
       const allInsertedBookmarks: any[] = [];
       
-      console.log(`Processing ${bookmarkDataArray.length} bookmarks in database chunks of ${DB_BATCH_SIZE}`);
+      console.log(`Upserting ${bookmarkDataArray.length} bookmarks in chunks of ${DB_BATCH_SIZE}`);
       
       for (let i = 0; i < bookmarkDataArray.length; i += DB_BATCH_SIZE) {
         const chunk = bookmarkDataArray.slice(i, i + DB_BATCH_SIZE);
         const chunkNumber = Math.floor(i / DB_BATCH_SIZE) + 1;
         const totalChunks = Math.ceil(bookmarkDataArray.length / DB_BATCH_SIZE);
         
-        console.log(`Inserting database chunk ${chunkNumber}/${totalChunks} (${chunk.length} bookmarks)`);
+        console.log(`Upserting database chunk ${chunkNumber}/${totalChunks} (${chunk.length} bookmarks)`);
         
         try {
           const { data: insertedBookmarks, error: insertError } = await supabase
             .from('bookmarks')
-            .insert(chunk)
+            .upsert(chunk, { onConflict: 'user_id,tweet_id' })
             .select('category_id');
 
           if (insertError) {
@@ -339,9 +306,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete a bookmark
   app.delete("/api/bookmarks/:id", async (req: Request, res: Response) => {
     try {
-      const bookmarkId = parseInt(req.params.id);
-      
-      if (isNaN(bookmarkId)) {
+      const bookmarkId = req.params.id;
+
+      if (!bookmarkId) {
         return res.status(400).json({ error: "Invalid bookmark ID" });
       }
 
@@ -372,10 +339,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update bookmark category
   app.patch("/api/bookmarks/:id/category", async (req: Request, res: Response) => {
     try {
-      const bookmarkId = parseInt(req.params.id);
+      const bookmarkId = req.params.id;
       const { categoryId } = req.body;
-      
-      if (isNaN(bookmarkId) || !categoryId) {
+
+      if (!bookmarkId || !categoryId) {
         return res.status(400).json({ error: "Invalid bookmark ID or category ID" });
       }
 

@@ -1,8 +1,6 @@
 import type { ImportedBookmark } from '../../shared/schema';
 import config from './config';
 
-console.log('Bookmark-X background script loaded');
-
 // Twitter user info received from content script
 let twitterUser: { id: string; username: string } | null = null;
 
@@ -134,8 +132,8 @@ async function completeInstallation() {
 
 function processRawTweetData(rawTweet: any): ImportedBookmark | null {
   try {
-    if (!rawTweet.tweetId || !rawTweet.handle || !rawTweet.authorName) {
-      console.warn('Bookmark-X: Missing required fields:', rawTweet);
+    if (!rawTweet.tweetId) {
+      console.warn('Bookmark-X: Missing tweetId:', JSON.stringify(rawTweet).substring(0, 200));
       return null;
     }
 
