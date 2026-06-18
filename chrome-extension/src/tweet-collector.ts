@@ -195,10 +195,10 @@ async function collectWithNewTurboMethod(
   let reachedMilestone = false;
 
   // Safety bounds (avoid infinite loops if X stops loading)
-  const MAX_BOOKMARKS = 5000; // remove the old hard cap of 100; keep a high safety cap
+  const MAX_BOOKMARKS = 350;
   const MAX_SCROLL_ATTEMPTS = 300;
   const NO_NEW_TWEETS_LIMIT = 15; // was 8; X often needs more time to load the next batch
-  const POST_SCROLL_WAIT_MS = 175; // was 175; too short for X network/virtualization
+  const POST_SCROLL_WAIT_MS = 175; 
   const SETTLE_POLL_MS = 150;
   const SETTLE_MAX_MS = 2500;
   
