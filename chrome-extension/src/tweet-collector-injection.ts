@@ -1,7 +1,7 @@
 /**
  * Runs in the PAGE context (MAIN world), not the extension/content-script world.
  *
- * Purpose: hook fetch/XHR to capture X.com bookmarks timeline GraphQL responses,
+ * Purpose: hook XHR to capture X.com bookmarks timeline GraphQL responses,
  * extract tweet data, and stream it back to the content script via window.postMessage.
  *
  * IMPORTANT:
@@ -81,12 +81,9 @@
   const PREBUFFER_MAX = 10;
   const PREBUFFER_TTL_MS = 15_000;
 
-  // Twitter/X has multiple GraphQL endpoint patterns
   const BOOKMARKS_URL_PATTERNS = [
-    /\/i\/api\/graphql\/[^/]+\/Bookmarks/i,           // Old pattern: /i/api/graphql/<hash>/Bookmarks
-    /\/api\/1\.1\/graphql\/user_flow\.json/i,         // New pattern: /api/1.1/graphql/user_flow.json
-    /\/i\/api\/1\.1\/graphql/i,                       // Alternate: /i/api/1.1/graphql
-    /graphql.*bookmark/i,                             // Generic: any graphql URL with "bookmark"
+    /\/i\/api\/graphql\/[^/]+\/Bookmarks/i,
+    /graphql.*bookmark/i,
   ];
 
   function isBookmarksGraphQLUrl(url: string): boolean {
@@ -272,10 +269,7 @@
     return null;
   }
 
-  // Captured from the first intercepted Bookmarks XHR — reused for direct pagination
   let capturedBaseUrl: string | null = null;
-  let capturedHeaders: Record<string, string> | null = null;
-
   let capturedFeaturesParam: string | null = null;
 
   function captureRequestTemplate(url: string) {
@@ -456,123 +450,13 @@
     }
   }
 
-  // Hook fetch
-  const originalFetch = window.fetch.bind(window);
-  console.log('Bookmark-X Injection: Fetch hook installed');
-  let fetchCallCount = 0;
-  let graphqlCallCount = 0;
-  let bookmarksCallCount = 0;
-  
-  window.fetch = async (...args: any[]) => {
-    fetchCallCount++;
-    // Avoid TS spread-arg issues by calling with explicit parameters.
-    const res = await originalFetch(args[0] as any, args[1] as any);
-    try {
-      const url = typeof args[0] === "string" ? args[0] : args[0]?.url;
-      
-      // Track GraphQL calls
-      if (url && url.includes('/i/api/graphql/')) {
-        graphqlCallCount++;
-        if (graphqlCallCount % 5 === 1) {
-          console.log(`Bookmark-X Injection: GraphQL call #${graphqlCallCount}:`, url.substring(0, 100));
-        }
-      }
-      
-      // Log every 20 fetch calls to see activity
-      if (fetchCallCount % 20 === 0) {
-        console.log(`Bookmark-X Injection: ${fetchCallCount} total fetches, ${graphqlCallCount} GraphQL, ${bookmarksCallCount} Bookmarks`);
-      }
-      
-      if (url && isBookmarksGraphQLUrl(url)) {
-        bookmarksCallCount++;
-        console.log(`Bookmark-X Injection: ✅ [${bookmarksCallCount}] Detected Bookmarks GraphQL URL:`, url.substring(0, 150));
-        const cloned = res.clone();
-        Promise.resolve()
-          .then(() => cloned.json())
-          .then((json) => onCapturedJson(String(url), json))
-          .catch((err) => {
-            console.error('Bookmark-X Injection: Error parsing JSON:', err);
-          });
-      }
-    } catch (err) {
-      console.error('Bookmark-X Injection: Error in fetch hook:', err);
-    }
-    return res;
-  };
-
-  // Hook Response.prototype.body getter — intercepts ReadableStream access.
-  // X.com reads response bodies via stream.getReader(), bypassing .json()/.text().
-  // We tee the stream for bookmarks URLs: one copy for X.com, one for us.
-  let responseCaptureCount = 0;
-  const origBodyDesc = Object.getOwnPropertyDescriptor(Response.prototype, 'body');
-  if (origBodyDesc?.get) {
-    const origBodyGet = origBodyDesc.get;
-    const teedResponses = new WeakSet<Response>();
-    Object.defineProperty(Response.prototype, 'body', {
-      get() {
-        const stream: ReadableStream | null = origBodyGet.call(this);
-        if (!stream || teedResponses.has(this)) return stream;
-        const url: string | undefined = this.url;
-        if (!url || !isBookmarksGraphQLUrl(url)) return stream;
-
-        teedResponses.add(this);
-        const [forCaller, forCapture] = stream.tee();
-        responseCaptureCount++;
-        console.log(`Bookmark-X Injection: ✅ [Stream tee #${responseCaptureCount}] Intercepting body for:`, url.substring(0, 150));
-        new Response(forCapture).text().then((text) => {
-          const json = safeJsonParse(text);
-          if (json) {
-            console.log(`Bookmark-X Injection: ✅ [Stream capture #${responseCaptureCount}] Got JSON from stream`);
-            onCapturedJson(url, json);
-          }
-        }).catch(() => {});
-        return forCaller;
-      },
-      configurable: true,
-      enumerable: true,
-    });
-    console.log('Bookmark-X Injection: Response.body stream hook installed');
-  }
-
-  // Also hook Response.json/text as fallback for non-streaming consumption
-  const originalResponseJson = Response.prototype.json;
-  const originalResponseText = Response.prototype.text;
-
-  const tryCaptureFetchResponse = (url: string | undefined, body: any) => {
-    if (!url || !isBookmarksGraphQLUrl(url)) return;
-    const json = typeof body === "string" ? safeJsonParse(body) : body;
-    if (!json || typeof json !== "object") return;
-    responseCaptureCount++;
-    console.log(`Bookmark-X Injection: ✅ [Response capture #${responseCaptureCount}] Captured bookmarks from:`, url.substring(0, 150));
-    onCapturedJson(url, json);
-  };
-
-  Response.prototype.json = async function () {
-    const json = await originalResponseJson.call(this);
-    try { tryCaptureFetchResponse(this.url, json); } catch {}
-    return json;
-  };
-
-  Response.prototype.text = async function () {
-    const text = await originalResponseText.call(this);
-    try { tryCaptureFetchResponse(this.url, text); } catch {}
-    return text;
-  };
-
-  console.log('Bookmark-X Injection: Response.json/text hooks installed');
-
   // Hook XHR — wrap onreadystatechange to read response BEFORE X.com's handler
   const originalOpen = XMLHttpRequest.prototype.open;
   const originalSend = XMLHttpRequest.prototype.send;
   console.log('Bookmark-X Injection: XHR hook installed');
-  let xhrCallCount = 0;
 
   XMLHttpRequest.prototype.open = function (this: XMLHttpRequest, method: string, url: string | URL, ...rest: any[]) {
-    const urlStr = String(url);
-    (this as any).__bx_url = urlStr;
-    if (urlStr.includes('graphql') || urlStr.includes('api/1.1') || urlStr.includes('user_flow')) {
-      console.log(`Bookmark-X Injection: XHR.open() called - ${method} ${urlStr.substring(0, 120)}`);
-    }
+    (this as any).__bx_url = String(url);
     return (originalOpen as any).apply(this, [method, url, ...rest]);
   } as any;
 
@@ -620,7 +504,6 @@
       xhr.onreadystatechange = function (ev: Event) {
         if (!captured && xhr.readyState === 4 && xhr.status === 200) {
           captured = true;
-          xhrCallCount++;
           console.log(`Bookmark-X Injection: ✅ XHR Bookmarks readyState=4:`, {
             url: url.substring(0, 150),
             responseType: xhr.responseType,
@@ -646,14 +529,6 @@
           console.log(`Bookmark-X Injection: ✅ XHR Bookmarks load event fallback`);
           const json = tryExtractXhrJson(xhr);
           if (json) onCapturedJson(url, json);
-        }
-      });
-    } else {
-      // Generic XHR logging for non-bookmarks calls
-      this.addEventListener("loadend", () => {
-        xhrCallCount++;
-        if (xhrCallCount % 5 === 1 || (url && url.includes('graphql'))) {
-          console.log(`Bookmark-X Injection: XHR #${xhrCallCount} completed:`, url.substring(0, 120));
         }
       });
     }
@@ -706,7 +581,7 @@
           activityInterval = null;
           return;
         }
-        console.log(`Bookmark-X Injection: Network activity - Fetch: ${fetchCallCount}, GraphQL: ${graphqlCallCount}, Bookmarks: ${bookmarksCallCount}, XHR: ${xhrCallCount}`);
+        console.log(`Bookmark-X Injection: Network activity - ${seenTweetIds.size} unique tweets collected`);
       }, 3000);
 
       return;
@@ -719,8 +594,7 @@
     }
 
     if (data.type === "BX_COLLECTOR_STOP" && typeof data.sessionId === "string") {
-      console.log('Bookmark-X Injection: STOP command received');
-      console.log(`Bookmark-X Injection: Final stats - Fetch: ${fetchCallCount}, GraphQL: ${graphqlCallCount}, Bookmarks: ${bookmarksCallCount}, XHR: ${xhrCallCount}`);
+      console.log(`Bookmark-X Injection: STOP - ${seenTweetIds.size} unique tweets collected`);
       if (activityInterval) { clearInterval(activityInterval); activityInterval = null; }
       setActive(false, data.sessionId);
       return;

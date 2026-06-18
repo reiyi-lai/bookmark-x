@@ -3,8 +3,6 @@ import { TweetCarousel, createLoadingModal } from './components/modal';
 import { showNotification } from './components/sync-button';
 
 type InjectMessage =
-  | { source: 'bookmark-x'; type: 'BX_COLLECTOR_STATUS'; sessionId: string; active: boolean; totalUnique: number }
-  | { source: 'bookmark-x'; type: 'BX_COLLECTOR_CAPTURE'; sessionId: string; url: string; extracted: number; newUnique: number; totalUnique: number }
   | { source: 'bookmark-x'; type: 'BX_TWEETS'; sessionId: string; tweets: Tweet[]; totalUnique: number; url: string }
   | { source: 'bookmark-x'; type: 'BX_PAGINATION_DONE'; sessionId: string; totalUnique: number };
 
@@ -67,22 +65,11 @@ function getScrollContainer(): HTMLElement {
         (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') &&
         el.scrollHeight > el.clientHeight + 50;
       
-      if (scrollable) {
-        console.log('Bookmark-X: Found scrollable container:', {
-          tagName: el.tagName,
-          className: el.className?.substring(0, 50),
-          scrollHeight: el.scrollHeight,
-          clientHeight: el.clientHeight,
-          scrollTop: el.scrollTop,
-          overflowY
-        });
-        return el;
-      }
+      if (scrollable) return el;
       el = el.parentElement;
       depth++;
     }
   }
-  console.log('Bookmark-X: Using fallback document scroller');
   return (document.scrollingElement as HTMLElement) || document.documentElement;
 }
 
@@ -94,47 +81,18 @@ export async function ensureCollectorInjected(): Promise<boolean> {
     const response = await chrome.runtime.sendMessage({ type: 'INJECT_COLLECTOR_SCRIPT' });
     if (response.success) {
       collectorInjected = true;
-      console.log('Bookmark-X: Collector script injected');
       return true;
     }
-    console.error('Bookmark-X: Failed to inject collector:', response.error);
     return false;
-  } catch (error) {
-    console.error('Bookmark-X: Error requesting injection:', error);
+  } catch {
     return false;
   }
 }
 
-async function scrollOnce(): Promise<boolean> {
-  const scroller = getScrollContainer();
-  const tweets = scroller.querySelectorAll('[data-testid="tweet"]');
-  if (tweets.length === 0) return false;
-
-  const lastTweet = tweets[tweets.length - 1] as HTMLElement;
-  const prevScrollHeight = scroller.scrollHeight;
-
-  const viewportHeight = window.innerHeight;
-  const scrollStep = Math.min(viewportHeight * 3, 3000);
-  scroller.scrollTop += scrollStep;
-  lastTweet.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  scroller.dispatchEvent(new Event('scroll', { bubbles: true }));
-
-  // Wait for content to settle
-  const SETTLE_POLL_MS = 150;
-  const SETTLE_MAX_MS = 2500;
-  const start = Date.now();
-  while (Date.now() - start < SETTLE_MAX_MS) {
-    if (scroller.scrollHeight !== prevScrollHeight) return true;
-    await new Promise(resolve => setTimeout(resolve, SETTLE_POLL_MS));
-  }
-  return true;
-}
 
 async function collectWithNetworkCapture(
   onTweetCollected?: (tweet: Tweet, totalCount: number) => void,
-  onDebug?: (debug: { responsesSeen: number; lastUrl: string; lastExtracted: number; lastNewUnique: number; totalUnique: number }) => void
 ): Promise<Tweet[]> {
-  console.log('Bookmark-X: Starting injection-based network capture');
 
   const injected = await ensureCollectorInjected();
   if (!injected) {
@@ -143,7 +101,6 @@ async function collectWithNetworkCapture(
   }
 
   const collected = new Map<string, Tweet>();
-  let responsesSeen = 0;
   const sessionId = `bx-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   return new Promise<Tweet[]>((resolve) => {
@@ -154,7 +111,6 @@ async function collectWithNetworkCapture(
       done = true;
       window.removeEventListener('message', messageHandler);
       window.postMessage({ source: 'bookmark-x', type: 'BX_COLLECTOR_STOP', sessionId }, '*');
-      console.log(`Bookmark-X: Network capture complete. ${collected.size} tweets collected.`);
       resolve(Array.from(collected.values()));
     };
 
@@ -172,18 +128,6 @@ async function collectWithNetworkCapture(
             onTweetCollected?.(tweet, collected.size);
           }
         }
-      }
-
-      if (data.type === 'BX_COLLECTOR_CAPTURE') {
-        const msg = data as InjectMessage & { type: 'BX_COLLECTOR_CAPTURE' };
-        responsesSeen++;
-        onDebug?.({
-          responsesSeen,
-          lastUrl: msg.url,
-          lastExtracted: msg.extracted,
-          lastNewUnique: msg.newUnique,
-          totalUnique: msg.totalUnique,
-        });
       }
 
       if (data.type === 'BX_PAGINATION_DONE') {
@@ -211,12 +155,9 @@ async function collectWithNetworkCapture(
       }
 
       if (collected.size === 0) {
-        console.log('Bookmark-X: No tweets from network capture after initial scroll');
         if (!done) cleanup();
         return;
       }
-
-      console.log(`Bookmark-X: First batch received (${collected.size} tweets). Starting direct cursor pagination...`);
 
       // Phase 2: Direct cursor pagination — no more scrolling needed
       window.postMessage({ source: 'bookmark-x', type: 'BX_COLLECTOR_FETCH_PAGES', sessionId }, '*');
@@ -233,11 +174,7 @@ async function collectWithNetworkCapture(
           lastSize = collected.size;
           staleSince = Date.now();
         }
-        // If no new tweets for 10s during pagination, assume done
-        if (Date.now() - staleSince > 10_000) {
-          console.log('Bookmark-X: Pagination stalled, finishing');
-          break;
-        }
+        if (Date.now() - staleSince > 10_000) break;
       }
 
       if (!done) cleanup();
@@ -501,29 +438,22 @@ export async function handleBulkBookmark() {
       data: userInfo
     });
     
-    console.log('Bookmark-X: Starting tweet collection...');
-    
-    progressText.textContent = 'Collecting... (initializing network capture)';
+    progressText.textContent = 'Collecting your bookmarks...';
 
     let allTweetData = await collectWithNetworkCapture((tweet, count) => {
       carousel.addTweet(tweet);
       if (count % 10 === 0 || count === 1) {
-        progressText.textContent = `Collecting... ${count} bookmarks from network capture`;
-      }
-    }, (dbg) => {
-      // Update occasionally so we don't spam layout; show we're actually seeing GraphQL responses.
-      if (dbg.responsesSeen % 2 === 0 && dbg.totalUnique === 0) {
-        progressText.textContent = `Collecting... (network) saw ${dbg.responsesSeen} responses, extracted ${dbg.lastExtracted}`;
+        progressText.textContent = `Collecting... ${count} bookmarks`;
       }
     });
 
-    // Fallback to DOM collector if network capture got nothing
+    // Fallback to DOM scraping if network capture got nothing
     if (allTweetData.length === 0) {
-      progressText.textContent = 'Network capture returned 0; falling back to DOM collector...';
+      progressText.textContent = 'Collecting...';
       allTweetData = await collectWithNewTurboMethod(1500, (tweet, count) => {
         carousel.addTweet(tweet);
         if (count % 3 === 0 || count === 1) {
-          progressText.textContent = `Collecting... ${count} bookmarks from DOM collector`;
+          progressText.textContent = `Collecting... ${count} bookmarks found`;
         }
       });
     }
