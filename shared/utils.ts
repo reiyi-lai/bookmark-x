@@ -13,6 +13,7 @@ export function cleanTwitterHtml(htmlContent: string): string {
       if (element.tagName === 'SPAN') {
         return element.textContent || '';
       }
+      return node.textContent || '';
   }).join('');
   
   return result.trim();

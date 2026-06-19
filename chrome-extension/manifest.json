@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Bookmark-X - Organize Twitter bookmarks into categories",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "Organize your Twitter bookmarks into categories. Access them with your own personalized dashboard.",
   
   "permissions": [
