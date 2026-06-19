@@ -7,7 +7,7 @@ interface Config {
 }
 
 function detectEnvironment(): Environment {
-  const isDevelopment = true; // BUILD_FLAG
+  const isDevelopment = false; // BUILD_FLAG
   return isDevelopment ? 'development' : 'production';
 }
 

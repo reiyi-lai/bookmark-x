@@ -16,7 +16,11 @@ class OpenAICategorizer {
   private categoryList: string;
 
   constructor(categories: Category[]) {
-    this.client = new OpenAI();
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      console.error('OPENAI_API_KEY is missing. Available env vars:', Object.keys(process.env).filter(k => k.includes('OPENAI') || k.includes('SUPABASE') || k === 'NODE_ENV').join(', '));
+    }
+    this.client = new OpenAI({ apiKey });
     this.categories = categories;
     this.categoryList = buildCategoryList(categories);
   }
