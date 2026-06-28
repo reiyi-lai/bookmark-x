@@ -9,8 +9,8 @@ GET /i/api/graphql/{deployment-hash}/Bookmarks?variables={"count":20,"cursor":".
 This is written in X.com’s own JS script as a XHR request.
 
 The main 2 optimizations we made are
-1. identify the hash that's found when X.com fires that GET request, 
-2. replay that GET request with a new cursor bottom value as ‘pagination’ to fetch the next subseq batch of tweets.
+1. Identify the hash that's found when X.com fires that GET request, 
+2. Replay that GET request with a new cursor bottom value as ‘pagination’ to fetch the next subseq batch of tweets.
 
 The `{hash}` changes every time X.com deploys new code. It's the same for all users at any given time, but can't be hardcoded since it changes frequently.
 
@@ -18,9 +18,12 @@ The `{hash}` changes every time X.com deploys new code. It's the same for all us
 
 **1. XHR hook for request discovery and initial extraction**
 
-We inject our own script into the page's own JS context (MAIN world) at `document_start`, before X.com's code runs. It wraps `XMLHttpRequest.prototype.send` and `onreadystatechange` so that when X.com fires its bookmarks GET request, our wrapper:
+We inject our own script into the page's own JS context (MAIN world) at `document_start`, before X.com's code runs. 
 
-- **Captures the deployment hash and request template** from the URL, so we know the current GraphQL endpoint to call for pagination.
+- `XMLHttpRequest.prototype.send` is wrapped to check if the URL matches X.com's bookmarks GraphQL endpoint (/i/api/graphql/<hash>/Bookmarks).
+- For matching requests, it wraps `onreadystatechange` to read the response JSON before X.com's own handler runs. This way we piggyback on the requests X.com already makes — no extra network calls needed for the initial page load.
+
+- **Captures the hash and GraphQL request template** from the URL, so we know the current GraphQL endpoint to call for pagination.
 - **Extracts tweets from the first response** by reading the JSON before passing control to X.com's original handler. 
 
 We don't send a duplicate — we read the response as it passes through.
