@@ -6,7 +6,7 @@ When a user visits `x.com/i/bookmarks`, X.com sends a GET request to X.com's own
 ```
 GET /i/api/graphql/{deployment-hash}/Bookmarks?variables={"count":20,"cursor":"..."}&features={...}
 ```
-This is fired by X.com’s own JS script via XHR.
+This is written in X.com’s own JS script as a XHR request.
 
 The main 2 optimizations we made are
 1. identify the hash that's found when X.com fires that GET request, 
