@@ -23,22 +23,6 @@ We inject our own script into the page's own JS context (MAIN world) at `documen
 - `XMLHttpRequest.prototype.send` is wrapped to check if the URL matches X.com's bookmarks GraphQL endpoint (/i/api/graphql/<hash>/Bookmarks) and get the hash.
 - For matching requests, it wraps `onreadystatechange` to read the response JSON before X.com's own handler runs. This way we piggyback on the requests X.com already makes — no extra network calls needed for the initial page load.
 
-**- What X.com’s GraphQL Response Contains**
-X.com returns a GraphQL JSON payload with a deeply nested structure:
-data.bookmark_timeline_v2.timeline.instructions[].entries[].content.itemContent.tweet_results.result
-
-Each result contains:
-- rest_id - the tweet ID
-- legacy.full_text - the tweet text
-- legacy.created_at - timestamp
-- core.user_results.result - the author info:
-  - core.screen_name / legacy.screen_name - handle
-  - core.name / legacy.name - display name
-  - avatar.image_url / legacy.profile_image_url_https - profile picture
-- legacy.extended_entities.media â- media attachments
-
-Our extraction code (extractTweetFromResult) extracts these with fallbacks for both old (legacy.*) and new (core.*, avatar.*) schema
-
 
 **2. Direct cursor pagination**
 
@@ -55,3 +39,21 @@ Response 2 response → cursor: "HCaQxMnm6fXxpSUAAA==" → Request 3
 Impact:
 Instead of waiting seconds between every 20 tweets for a scroll, we fetch ~130 tweets/second, with a set 150ms delay between requests to avoid rate limiting. 350 bookmarks take ~4 seconds versus minutes of manual scrolling.
 
+**What X.com’s GraphQL Response Contains**
+
+X.com returns a GraphQL JSON payload with a deeply nested structure:
+data.bookmark_timeline_v2.timeline.instructions[].entries[].content.itemContent.tweet_results.result
+
+Each result contains:
+```
+- rest_id - the tweet ID
+- legacy.full_text - the tweet text
+- legacy.created_at - timestamp
+- core.user_results.result - the author info:
+  - core.screen_name / legacy.screen_name - handle
+  - core.name / legacy.name - display name
+  - avatar.image_url / legacy.profile_image_url_https - profile picture
+- legacy.extended_entities.media â- media attachments
+```
+
+Our extraction code (extractTweetFromResult) extracts these with fallbacks for both old (legacy.*) and new (core.*, avatar.*) schema
