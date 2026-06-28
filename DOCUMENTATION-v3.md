@@ -29,7 +29,25 @@ We inject our own script into the page's own JS context (MAIN world) at `documen
 Instead of scrolling the page, we send the GET request directly to the GraphQL API via `fetch()`, swapping the `cursor` parameter each time.
 
 Each GraphQL response contains a `cursorType: "Bottom"` entry that points to its bottom:
-
+```
+{
+  "data": {
+    "bookmark_timeline_v2": {
+      "timeline": {
+        "instructions": [{
+          "entries": [
+            { "content": { "entryType": "TimelineTimelineItem", "tweet_results": { ... } } },
+            { "content": { "entryType": "TimelineTimelineItem", "tweet_results": { ... } } },
+            ...
+            { "content": { "cursorType": "Top", "value": "HBaa..." } },
+            { "content": { "cursorType": "Bottom", "value": "HCaQxMnm6fXxpSUAAA==" } }
+          ]
+        }]
+      }
+    }
+  }
+}
+```
 ```
 Response 1 response → cursor: "HBaawLXl5eTipSUAAA==" → Request 2
 Response 2 response → cursor: "HCaQxMnm6fXxpSUAAA==" → Request 3
