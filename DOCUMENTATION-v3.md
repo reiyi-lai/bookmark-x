@@ -23,11 +23,28 @@ We inject our own script into the page's own JS context (MAIN world) at `documen
 - `XMLHttpRequest.prototype.send` is wrapped to check if the URL matches X.com's bookmarks GraphQL endpoint (/i/api/graphql/<hash>/Bookmarks) and get the hash.
 - For matching requests, it wraps `onreadystatechange` to read the response JSON before X.com's own handler runs. This way we piggyback on the requests X.com already makes — no extra network calls needed for the initial page load.
 
+**- What X.com’s GraphQL Response Contains**
+X.com returns a GraphQL JSON payload with a deeply nested structure:
+data.bookmark_timeline_v2.timeline.instructions[].entries[].content.itemContent.tweet_results.result
+
+Each result contains:
+- rest_id - the tweet ID
+- legacy.full_text - the tweet text
+- legacy.created_at - timestamp
+- core.user_results.result - the author info:
+  - core.screen_name / legacy.screen_name - handle
+  - core.name / legacy.name - display name
+  - avatar.image_url / legacy.profile_image_url_https - profile picture
+- legacy.extended_entities.media â- media attachments
+
+Our extraction code (extractTweetFromResult) extracts these with fallbacks for both old (legacy.*) and new (core.*, avatar.*) schema
+
+
 **2. Direct cursor pagination**
 
 Instead of scrolling the page, we send the GET request directly to the GraphQL API via `fetch()`, swapping the `cursor` parameter each time.
 
-Each GraphQL response contains a `cursorType: "Bottom"` entry that points to its bottom. We extract it and pass it as the cursor in the next request:
+Each GraphQL response contains a `cursorType: "Bottom"` entry that points to its bottom:
 
 ```
 Response 1 response → cursor: "HBaawLXl5eTipSUAAA==" → Request 2
