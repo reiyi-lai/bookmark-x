@@ -5,15 +5,15 @@
    Raw Tweets → CollectedTweet → ImportedBookmark
    ```
    - User visits Twitter bookmarks page
-   - Content script scrapes tweet data via DOM manipulation
+   - Injection script extracts tweet via sending GET request directly to x.com's GraphQL API with updated 'cursor'
    - Background script processes and sends to server
 
 2. **Server Processing**
    ```
-   ImportedBookmark → ML Categorizer → Supabase Storage
+   ImportedBookmark → OpenAI API  → Supabase Storage
    ```
    - Server receives bulk tweet data
-   - ML categorizer assigns categories
+   - OpenAI reads tweets and assigns categories
    - Processed bookmarks stored in Supabase
    - Data transformed for client consumption
 
@@ -32,16 +32,137 @@
 #### Chrome Extension Routes
 | Endpoint | Method | Purpose | Authentication |
 |----------|--------|---------|----------------|
-| `/api/bookmarks/import` | POST | Bulk import tweets from extension + gets categorized tweets from bookmark service and bulk inserts into Supabase | Twitter ID in payload |
+| `/api/bookmarks/import` | POST | Bulk import tweets from extension + gets categorized tweets from bookmark service and bulk upserts into Supabase | Twitter ID in payload |
 
 #### Web Application Routes
 | Endpoint | Method | Purpose | Authentication |
 |----------|--------|---------|----------------|
 | `/api/bookmarks` | GET | Fetch user bookmarks from Supabase and transform bookmark for client | X-Twitter-ID header |
-| `/api/categories` | GET | Fetch categories from Supbase and enrich with metadata | None (public) |
+| `/api/categories` | GET | Fetch categories from Supabase and enrich with metadata | None (public) |
 | `/api/bookmarks/:id` | DELETE | Delete specific bookmark | X-Twitter-ID header |
 | `/api/bookmarks/:id/category` | PATCH | Update bookmark category | X-Twitter-ID header |
 | `/api/users/:userId/complete-registration` | POST | Complete user email registration | X-Twitter-ID header |
+
+### Authentication Flow
+
+#### Chrome Extension → Server
+```
+Extension Collection → Twitter User Info → Server Validation → User Creation/Lookup
+```
+- Extension extracts Twitter user info via GraphQL API request
+- Sends user data with bookmark payload
+- Server creates or finds existing user in Supabase
+
+#### Client → Server
+```
+Client Request → Twitter ID in Header → User Lookup → Request Processing
+```
+- Client includes `X-Twitter-ID` header
+- Server validates user exists in database
+- Processes request with user context
+
+## Data Transformations
+
+### 1. CollectedTweet → ImportedBookmark
+**Location:** `chrome-extension/src/background.ts:processRawTweetData()`
+```typescript
+// Raw data from GraphQL extraction
+interface CollectedTweet {
+  tweetId: string;
+  tweetUrl: string;
+  authorName: string;
+  handle: string;
+  tweetText: string;
+  time: string;
+  profilePicture: string;
+  media: 'has_media' | null;
+}
+
+// Standardized format for server
+interface ImportedBookmark {
+  id: string;
+  text: string;
+  author_id: string;
+  created_at: string;
+  media_attachments?: MediaAttachment[] | null;
+  url: string;
+  author: { id, name, username, profile_image_url };
+}
+```
+
+### 2. ImportedBookmark → ProcessedBookmark (ML Categorization)
+**Location:** `server/services/bookmark-service.ts:processBookmarks()`
+
+**Input Format:**
+```typescript
+// Input parameter
+bookmarksData: ImportedBookmark[]
+
+// ImportedBookmark interface
+interface ImportedBookmark {
+  id: string;
+  text: string;
+  author_id: string;
+  created_at: string;
+  media_attachments?: MediaAttachment[] | null;
+  url: string;
+  author: {
+    id: string;
+    name: string;
+    username: string;
+    profile_image_url?: string | null;
+  };
+}
+```
+
+**Output Format:**
+```typescript
+// Return type
+Promise<{
+  bookmarks: ProcessedBookmark[];
+  categories: Category[];
+}>
+
+// ProcessedBookmark interface
+interface ProcessedBookmark extends ImportedBookmark {
+  categoryId: number; // Added by ML categorizer
+}
+
+// Category interface
+interface Category {
+  id: number;
+  name: string;
+  description: string;
+  color: string;
+  created_at: string;
+  icon: string;        // Added by metadata enrichment
+  order: number;       // Added by metadata enrichment
+}
+```
+
+### 3. DatabaseBookmark → ClientBookmark
+**Location:** `server/routes/index.ts:/api/bookmarks`
+```typescript
+// Database schema (simplified)
+interface DatabaseBookmark {
+  id: string;
+  tweet_id: string;
+  tweet_content: string;
+  category_id: number;
+  author_username: string;
+  // ... other fields
+}
+
+// Client-optimized format
+interface ClientBookmark {
+  id: string;
+  content: string;
+  categoryId: number;
+  authorName: string;
+  createdAt: Date;
+  // ... other fields
+}
+```
 
 ### Detailed API Specifications
 
@@ -377,126 +498,5 @@ interface ImportedBookmark {
 // Other errors
 {
   "error": string
-}
-```
-
-### Authentication Flow
-
-#### Chrome Extension → Server
-```
-Extension Collection → Twitter User Info → Server Validation → User Creation/Lookup
-```
-- Extension extracts Twitter user info from DOM
-- Sends user data with bookmark payload
-- Server creates or finds existing user in Supabase
-
-#### Client → Server
-```
-Client Request → Twitter ID in Header → User Lookup → Request Processing
-```
-- Client includes `X-Twitter-ID` header
-- Server validates user exists in database
-- Processes request with user context
-
-## Data Transformations
-
-### 1. CollectedTweet → ImportedBookmark
-**Location:** `chrome-extension/src/background.ts:processRawTweetData()`
-```typescript
-// Raw data from DOM scraping
-interface CollectedTweet {
-  tweetId: string;
-  tweetUrl: string;
-  authorName: string;
-  handle: string;
-  tweetText: string;
-  time: string;
-  profilePicture: string;
-  media: 'has_media' | null;
-}
-
-// Standardized format for server
-interface ImportedBookmark {
-  id: string;
-  text: string;
-  author_id: string;
-  created_at: string;
-  media_attachments?: MediaAttachment[] | null;
-  url: string;
-  author: { id, name, username, profile_image_url };
-}
-```
-
-### 2. ImportedBookmark → ProcessedBookmark (ML Categorization)
-**Location:** `server/services/bookmark-service.ts:processBookmarks()`
-
-**Input Format:**
-```typescript
-// Input parameter
-bookmarksData: ImportedBookmark[]
-
-// ImportedBookmark interface
-interface ImportedBookmark {
-  id: string;
-  text: string;
-  author_id: string;
-  created_at: string;
-  media_attachments?: MediaAttachment[] | null;
-  url: string;
-  author: {
-    id: string;
-    name: string;
-    username: string;
-    profile_image_url?: string | null;
-  };
-}
-```
-
-**Output Format:**
-```typescript
-// Return type
-Promise<{
-  bookmarks: ProcessedBookmark[];
-  categories: Category[];
-}>
-
-// ProcessedBookmark interface
-interface ProcessedBookmark extends ImportedBookmark {
-  categoryId: number; // Added by ML categorizer
-}
-
-// Category interface
-interface Category {
-  id: number;
-  name: string;
-  description: string;
-  color: string;
-  created_at: string;
-  icon: string;        // Added by metadata enrichment
-  order: number;       // Added by metadata enrichment
-}
-```
-
-### 3. DatabaseBookmark → ClientBookmark
-**Location:** `server/routes/index.ts:/api/bookmarks`
-```typescript
-// Database schema (simplified)
-interface DatabaseBookmark {
-  id: number;
-  tweet_id: string;
-  tweet_content: string;
-  category_id: number;
-  author_username: string;
-  // ... other fields
-}
-
-// Client-optimized format
-interface ClientBookmark {
-  id: string;
-  content: string;
-  categoryId: number;
-  authorName: string;
-  createdAt: Date;
-  // ... other fields
 }
 ```
