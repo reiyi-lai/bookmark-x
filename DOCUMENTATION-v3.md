@@ -20,13 +20,8 @@ The `{hash}` changes every time X.com deploys new code. It's the same for all us
 
 We inject our own script into the page's own JS context (MAIN world) at `document_start`, before X.com's code runs. 
 
-- `XMLHttpRequest.prototype.send` is wrapped to check if the URL matches X.com's bookmarks GraphQL endpoint (/i/api/graphql/<hash>/Bookmarks).
+- `XMLHttpRequest.prototype.send` is wrapped to check if the URL matches X.com's bookmarks GraphQL endpoint (/i/api/graphql/<hash>/Bookmarks) and get the hash.
 - For matching requests, it wraps `onreadystatechange` to read the response JSON before X.com's own handler runs. This way we piggyback on the requests X.com already makes — no extra network calls needed for the initial page load.
-
-- **Captures the hash and GraphQL request template** from the URL, so we know the current GraphQL endpoint to call for pagination.
-- **Extracts tweets from the first response** by reading the JSON before passing control to X.com's original handler. 
-
-We don't send a duplicate — we read the response as it passes through.
 
 **2. Direct cursor pagination**
 
